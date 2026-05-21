@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0038a8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DSWD SpotCheck">
+<title>DSWD Spot Check</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root{
+  --blue:#0038a8;--blue2:#002680;--red:#ce1126;--yellow:#fcd116;
+  --green:#198754;--orange:#fd7e14;--surface:#f4f6fb;
+  --card:#fff;--border:#dde3f0;--text:#1a1f36;--muted:#6b7280;
+  --radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;scroll-behavior:auto}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--surface);color:var(--text);overflow-x:hidden}
+
+/* SCREENS */
+.screen{display:none!important}
+.screen.active{display:block!important}
+
+/* SPLASH */
+#screen-splash.active{
+  display:flex!important;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;background:linear-gradient(160deg,#0038a8 0%,#001a6e 60%,#ce1126 100%);
+}
+#screen-splash .sp-ring{
+  width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+}
+
+/* OFFLINE / LOADING / TOAST */
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:var(--orange);color:#fff;text-align:center;padding:7px;font-size:12px;font-weight:700}
+#offlineBanner.show{display:block}
+#loadingOverlay{display:none;position:fixed;inset:0;z-index:9998;background:rgba(255,255,255,.92);
+  flex-direction:column;align-items:center;justify-content:center}
+#loadingOverlay.show{display:flex}
+.spin-ring{width:52px;height:52px;border:5px solid var(--border);border-top-color:var(--blue);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toastWrap{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9997;
+  width:88%;max-width:380px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast-msg{border-radius:10px;padding:13px 16px;font-size:13.5px;font-weight:600;color:#fff;
+  text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:toastIn .25s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}}
+#syncBubble{display:none;position:fixed;bottom:82px;right:14px;z-index:400;
+  background:var(--orange);color:#fff;border-radius:20px;padding:6px 13px;
+  font-size:12px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.2);
+  align-items:center;gap:5px;cursor:pointer}
+#syncBubble.show{display:flex}
+
+/* HEADER */
+.app-header{background:var(--blue);color:#fff;padding:13px 16px;
+  position:sticky;top:0;z-index:300;box-shadow:0 2px 10px rgba(0,56,168,.25);
+  display:flex;align-items:center;gap:12px}
+.app-header h5{margin:0;font-size:16px;font-weight:700}
+.app-header .sub{font-size:11px;opacity:.75;margin-top:1px}
+.btn-ghost{background:transparent;border:1.5px solid rgba(255,255,255,.35);color:#fff;
+  border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+.hdr-back{background:none;border:none;color:#fff;padding:4px;cursor:pointer;flex-shrink:0}
+
+/* LOGIN */
+#screen-login{min-height:100vh;
+  background:linear-gradient(160deg,#0038a8 0%,#001a6e 60%,#ce1126 100%);
+  display:flex!important;align-items:center;justify-content:center;padding:24px}
+.login-box{background:#fff;border-radius:20px;padding:36px 28px;
+  width:100%;max-width:390px;box-shadow:0 24px 64px rgba(0,0,0,.32)}
+.login-emblem{text-align:center;margin-bottom:28px}
+.badge-ring{width:76px;height:76px;border-radius:50%;background:var(--blue);
+  display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;
+  box-shadow:0 4px 20px rgba(0,56,168,.4)}
+.login-emblem h4{color:var(--blue);font-weight:800;font-size:18px;margin:0}
+.login-emblem p{color:var(--muted);font-size:12px;margin:4px 0 0}
+.red-line{width:36px;height:3px;background:var(--red);margin:8px auto 0;border-radius:2px}
+.field-wrap{margin-bottom:16px}
+.field-wrap label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.field-wrap input{width:100%;padding:13px 14px;border:2px solid var(--border);
+  border-radius:10px;font-size:16px;font-family:inherit;transition:border-color .2s;outline:none}
+.field-wrap input:focus{border-color:var(--blue)}
+.btn-login{width:100%;background:var(--blue);color:#fff;border:none;border-radius:11px;
+  padding:15px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer}
+.btn-login:active{background:var(--blue2)}
+.login-footer{text-align:center;margin-top:20px;font-size:11px;color:var(--muted)}
+
+/* HOME */
+.home-hero{background:linear-gradient(135deg,var(--blue) 0%,#002680 100%);
+  color:#fff;padding:24px 18px 40px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px;margin-top:-22px}
+.stat-tile{background:#fff;border-radius:14px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+.stat-tile .num{font-size:30px;font-weight:800}
+.stat-tile .lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
+.num-blue{color:var(--blue)}.num-green{color:var(--green)}
+.num-orange{color:var(--orange)}.num-red{color:var(--red)}
+.home-actions{padding:16px 14px 0}
+.btn-pf{width:100%;background:var(--blue);color:#fff;border:none;border-radius:13px;
+  padding:16px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.btn-pf:active{background:var(--blue2)}
+.btn-of{width:100%;background:#fff;color:var(--blue);border:2px solid var(--blue);
+  border-radius:13px;padding:14px;font-size:15px;font-weight:700;font-family:inherit;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px}
+.btn-of:active{background:#e8efff}
+
+/* CARDS */
+.sw{padding:14px}
+.card-panel{background:#fff;border-radius:var(--radius);padding:18px;
+  box-shadow:var(--shadow);margin-bottom:12px}
+.sec-title{font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;
+  letter-spacing:.8px;border-bottom:2px solid var(--blue);padding-bottom:8px;margin-bottom:14px}
+
+/* SEARCH */
+.search-bar-wrap{padding:14px;background:var(--blue)}
+.search-bar{display:flex;align-items:center;background:#fff;border-radius:11px;padding:4px 14px;gap:10px}
+.search-bar input{flex:1;border:none;outline:none;padding:10px 0;font-size:16px;font-family:inherit;color:var(--text)}
+.result-item{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;
+  border:2px solid transparent;box-shadow:var(--shadow);transition:all .15s;display:flex;align-items:center;gap:14px}
+.result-item:active,.result-item.picked{border-color:var(--blue);background:#edf2ff}
+.result-avatar{width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+.result-name{font-size:15px;font-weight:700;color:var(--text)}
+.result-detail{font-size:12px;color:var(--muted);margin-top:2px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state i{font-size:48px;display:block;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px;margin:0}
+
+/* PROGRESS */
+.progress-wrap{background:#fff;padding:12px 16px;border-bottom:1px solid var(--border);
+  position:sticky;top:52px;z-index:200}
+.step-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.step-name{font-size:13px;font-weight:700;color:var(--blue)}
+.step-count{font-size:11px;color:var(--muted);font-weight:600}
+.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--blue);border-radius:3px;transition:width .35s ease}
+
+/* FORM */
+.form-body{padding:14px;padding-bottom:110px}
+.opt-tile{display:flex;align-items:center;gap:14px;border:2px solid var(--border);
+  border-radius:12px;padding:13px 14px;margin-bottom:8px;cursor:pointer;
+  background:#fafbff;transition:all .15s}
+.opt-tile.on{border-color:var(--blue);background:#edf2ff}
+.opt-tile input[type=radio],.opt-tile input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue);flex-shrink:0}
+.opt-tile label{font-size:15px;font-weight:600;cursor:pointer;margin:0;color:var(--text)}
+.opt-tile.sm label{font-size:14px}
+.cond-box{background:#f0f4ff;border-left:4px solid var(--blue);border-radius:0 10px 10px 0;
+  padding:14px;margin:2px 0 10px;display:none}
+.cond-box.show{display:block}
+.f-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:6px;display:block}
+.f-input{width:100%;padding:12px 13px;border:2px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;color:var(--text)}
+.f-input:focus{border-color:var(--blue)}
+.f-input[readonly]{background:#f8f9fc;color:var(--muted)}
+.f-input.editable{background:#fffef0;border-color:#fcd116}
+.f-select{width:100%;padding:12px 13px;border:2px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;outline:none;background:#fff;color:var(--text)}
+.f-select:focus{border-color:var(--blue)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 80px;gap:10px}
+.mb12{margin-bottom:12px}
+.bene-hero{background:linear-gradient(135deg,var(--blue),#001a6e);color:#fff;
+  border-radius:14px;padding:18px 16px;margin-bottom:16px}
+.bene-hero .bname{font-size:19px;font-weight:800}
+.bene-hero .bdetail{font-size:12px;opacity:.8;margin-top:4px;display:flex;align-items:center;gap:5px}
+
+/* SIGNATURES & PHOTO */
+.sig-wrap{border:2px dashed var(--border);border-radius:12px;background:#fafbff;
+  position:relative;overflow:hidden;margin-bottom:8px}
+.sig-canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
+.sig-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;color:#c5cee0;pointer-events:none;font-size:13px;gap:6px}
+.sig-hint i{font-size:28px}
+.sig-hint.gone{display:none}
+.btn-clr{border:1.5px solid var(--border);background:#fff;border-radius:8px;
+  padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+
+/* PHOTO ZONE — using label for reliable mobile camera trigger */
+.photo-label{display:block;cursor:pointer;width:100%}
+.photo-zone{border:2px dashed var(--border);border-radius:14px;background:#fafbff;
+  overflow:hidden;transition:border-color .2s;min-height:180px;
+  display:flex;align-items:center;justify-content:center}
+.photo-zone.filled{border-style:solid;border-color:var(--blue)}
+.photo-zone img{width:100%;display:block;border-radius:12px}
+.photo-ph{text-align:center;color:#c5cee0;padding:24px}
+.photo-ph i{font-size:44px;display:block;margin-bottom:10px}
+.photo-ph p{font-size:14px;font-weight:600;margin:0}
+.photo-ph small{font-size:11px;color:#d0d5e0}
+
+/* GPS */
+.gps-block{background:#f0faf4;border:2px solid #b7e5c9;border-radius:12px;
+  padding:14px;display:flex;align-items:center;gap:12px}
+.gps-block.pending{background:#fff8f0;border-color:#fcd9a0}
+.gps-icon{font-size:24px}
+
+/* REVIEW */
+.review-row{display:flex;padding:10px 0;border-bottom:1px solid var(--border);gap:10px}
+.review-row:last-child{border-bottom:none}
+.rlabel{font-size:12px;color:var(--muted);font-weight:600;min-width:110px;flex-shrink:0}
+.rvalue{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.submit-notice{border-radius:12px;padding:14px;font-size:13px;font-weight:600;
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.submit-notice.offline{background:#fff8f0;color:var(--orange);border:1.5px solid #fcd9a0}
+.submit-notice.online{background:#f0faf4;color:var(--green);border:1.5px solid #b7e5c9}
+
+/* NAV BUTTONS */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:10px 14px;
+  box-shadow:0 -2px 14px rgba(0,0,0,.09);display:flex;gap:10px;z-index:300}
+.btn-bk{background:var(--surface);color:var(--text);border:2px solid var(--border);
+  border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;flex:0 0 auto}
+.btn-nx{flex:1;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:14px;
+  font-size:16px;font-weight:700;font-family:inherit;cursor:pointer}
+.btn-nx:active{background:var(--blue2)}
+.btn-sb{flex:1;background:var(--green);color:#fff;border:none;border-radius:12px;padding:14px;
+  font-size:16px;font-weight:700;font-family:inherit;cursor:pointer}
+
+/* RECENT & SYNC */
+.recent-row{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--border)}
+.recent-row:last-child{border-bottom:none}
+.recent-name{font-size:14px;font-weight:700}
+.recent-time{font-size:11px;color:var(--muted);margin-top:1px}
+.pill{font-size:11px;font-weight:700;border-radius:20px;padding:4px 10px;color:#fff}
+.pill-green{background:var(--green)}.pill-orange{background:var(--orange)}
+.sync-row{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.sync-row:last-child{border-bottom:none}
+
+/* ADMIN */
+.admin-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.admin-stat{background:var(--surface);border-radius:12px;padding:14px;text-align:center}
+.admin-stat .n{font-size:26px;font-weight:800;color:var(--blue)}
+.admin-stat .l{font-size:11px;color:var(--muted);font-weight:600}
+.upload-drop{border:2px dashed var(--border);border-radius:12px;padding:28px;
+  text-align:center;cursor:pointer;transition:all .2s;color:var(--muted);background:var(--surface)}
+.upload-drop:hover{border-color:var(--blue);background:#edf2ff}
+.upload-drop i{font-size:36px;display:block;margin-bottom:10px}
+.upload-drop p{font-size:14px;font-weight:600;margin:0}
+.info-box{background:#edf2ff;border-radius:10px;padding:12px 14px;font-size:13px;
+  color:var(--blue);font-weight:600;display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.info-box i{flex-shrink:0;font-size:16px;margin-top:1px}
+.warn-box{background:#fff8f0;border-radius:10px;padding:12px 14px;font-size:13px;
+  color:var(--orange);font-weight:600;display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;
+  border:1.5px solid #fcd9a0}
+.warn-box i{flex-shrink:0;font-size:16px;margin-top:1px}
+
+/* ======================================================
+   TABLET RESPONSIVE (768px+)
+====================================================== */
+@media(min-width:768px){
+  body{background:#d8dde8}
+  .screen-shell{max-width:700px;margin:0 auto;background:var(--surface);
+    min-height:100vh;box-shadow:0 0 60px rgba(0,0,0,.15)}
+  #screen-login{padding:40px}
+  .login-box{max-width:460px;padding:44px 40px}
+  .stats-grid{grid-template-columns:repeat(4,1fr);gap:12px}
+  .form-body{padding:20px;padding-bottom:120px;max-width:700px;margin:0 auto}
+  .row2{gap:16px}.row3{gap:16px}
+  .opt-tile{padding:16px 18px}.opt-tile label{font-size:16px}
+  .f-input,.f-select{font-size:16px;padding:14px}
+  .card-panel{padding:24px}
+  .bene-hero .bname{font-size:22px}
+  .sig-canvas{height:160px!important}
+  .photo-zone{min-height:240px}
+  .btn-pf,.btn-of{font-size:17px;padding:18px}
+  .admin-stat-grid{grid-template-columns:repeat(3,1fr)}
+  .tab-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .bottom-nav{max-width:700px;left:50%;transform:translateX(-50%)}
+  .progress-wrap{top:53px}
+  #syncBubble{right:calc(50% - 336px)}
+  .app-header{max-width:700px;margin:0 auto;position:sticky;top:0}
+}
+@media(min-width:1024px){
+  .screen-shell{max-width:800px}
+  .form-body{max-width:800px}
+  .bottom-nav{max-width:800px}
+}
+</style>
+</head>
+<body>
+
+<div class="screen-shell">
+
+<!-- GLOBAL UI -->
+<div id="offlineBanner"><i class="bi bi-wifi-off"></i> Offline — Data saved locally</div>
+<div id="loadingOverlay"><div class="spin-ring"></div><p id="loadingMsg" style="margin-top:16px;font-weight:700;color:var(--muted)">Loading…</p></div>
+<div id="toastWrap"></div>
+<div id="syncBubble" onclick="goSync()"><i class="bi bi-arrow-repeat"></i><span id="syncCount">0</span> unsynced</div>
+
+<!-- HIDDEN FILE INPUTS — using label triggers in HTML for reliable mobile camera -->
+<input type="file" id="thumbInput"  accept="image/*" capture="environment" style="display:none" onchange="handleCapture(event,'thumbmark')">
+<input type="file" id="clientInput" accept="image/*" capture="environment" style="display:none" onchange="handleCapture(event,'client')">
+<input type="file" id="csvInput"    accept=".csv"                          style="display:none" onchange="handleCSV(event)">
+
+<!-- ============================
+     SPLASH
+============================= -->
+<div class="screen" id="screen-splash">
+  <div class="sp-ring"><i class="bi bi-person-badge-fill" style="font-size:40px;color:#fff"></i></div>
+  <div style="color:#fff;font-size:20px;font-weight:800">DSWD Social Pension</div>
+  <div style="color:rgba(255,255,255,.7);font-size:13px;margin-top:6px">Beneficiary Spot Check System</div>
+  <div style="color:rgba(255,255,255,.5);font-size:11px;margin-top:24px">FIELD OFFICE IV-A · CALABARZON</div>
+</div>
+
+<!-- ============================
+     LOGIN
+============================= -->
+<div class="screen active" id="screen-login">
+  <div class="login-box">
+    <div class="login-emblem">
+      <div class="badge-ring"><i class="bi bi-person-badge-fill" style="font-size:36px;color:#fff"></i></div>
+      <h4>DSWD Social Pension</h4>
+      <p>Beneficiary Spot Check System</p>
+      <div class="red-line"></div>
+    </div>
+    <div class="field-wrap">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Enter username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field-wrap">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" onclick="doLogin()"><i class="bi bi-box-arrow-in-right"></i>&nbsp; Sign In</button>
+    <p class="login-footer">DSWD Field Office IV-A · CALABARZON<br>v2.0 &nbsp;|&nbsp; Works Offline</p>
+  </div>
+</div>
+
+<!-- ============================
+     VALIDATOR HOME
+============================= -->
+<div class="screen" id="screen-home">
+  <div class="home-hero">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:12px;opacity:.7">Welcome,</div>
+        <div style="font-size:22px;font-weight:800" id="hName">—</div>
+        <div style="font-size:12px;opacity:.65">Field Validator</div>
+      </div>
+      <button class="btn-ghost" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i></button>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-tile"><div class="num num-blue" id="sTotal">—</div><div class="lbl">Assigned</div></div>
+    <div class="stat-tile"><div class="num num-green" id="sDone">—</div><div class="lbl">Validated</div></div>
+    <div class="stat-tile"><div class="num num-orange" id="sPending">—</div><div class="lbl">Pending</div></div>
+    <div class="stat-tile"><div class="num num-red" id="sUnsynced">—</div><div class="lbl">Unsynced</div></div>
+  </div>
+  <div class="home-actions">
+    <button class="btn-pf" onclick="goSearch()"><i class="bi bi-search" style="font-size:18px"></i>Find Beneficiary</button>
+    <button class="btn-of" onclick="goSync()"><i class="bi bi-cloud-arrow-up" style="font-size:18px"></i>Sync Records</button>
+    <div class="card-panel">
+      <div class="sec-title">Recent Validations</div>
+      <div id="recentList"><div class="empty-state" style="padding:16px 0"><i class="bi bi-clipboard-x" style="font-size:28px;display:block;margin-bottom:6px;opacity:.35"></i><p style="font-size:13px;margin:0">No validations yet</p></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     ADMIN
+============================= -->
+<div class="screen" id="screen-admin">
+  <div class="app-header" style="justify-content:space-between">
+    <div><h5>Admin Panel</h5><div class="sub">DSWD Spot Check</div></div>
+    <button class="btn-ghost" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i></button>
+  </div>
+  <div class="sw">
+    <div class="card-panel">
+      <div class="sec-title">Database Status</div>
+      <div class="admin-stat-grid">
+        <div class="admin-stat"><div class="n" id="adminBeneCount">—</div><div class="l">Beneficiaries</div></div>
+        <div class="admin-stat"><div class="n" id="adminValCount">—</div><div class="l">Validations</div></div>
+      </div>
+    </div>
+    <div class="card-panel">
+      <div class="sec-title">Upload Beneficiary Masterlist</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Upload CSV from the official masterlist. Required columns match the DSWD Social Pension masterlist format.</p>
+      <div class="info-box"><i class="bi bi-info-circle-fill"></i>Required columns: person_id, last_name, first_name, middle_name, ext_name, province, city_mun_name, barangay, house_number, sitio_purok, street_name, birthdate, sex, region, validator_id</div>
+      <label for="csvInput" class="upload-drop" style="cursor:pointer">
+        <i class="bi bi-file-earmark-spreadsheet"></i>
+        <p>Tap to select CSV file</p>
+        <small>Exported from Google Sheets masterlist</small>
+      </label>
+      <div id="uploadMsg" style="margin-top:10px;font-size:13px;font-weight:600"></div>
+    </div>
+    <div class="card-panel">
+      <div class="sec-title">Manage Validators</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Pull validator accounts from the USERS tab in Google Sheets.</p>
+      <button class="btn-of" onclick="syncValidators()"><i class="bi bi-people"></i>Sync Validators from Sheet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     SEARCH
+============================= -->
+<div class="screen" id="screen-search">
+  <div class="app-header">
+    <button class="hdr-back" onclick="showScreen('screen-home')"><i class="bi bi-arrow-left" style="font-size:20px"></i></button>
+    <div><h5>Find Beneficiary</h5><div class="sub">Search by name or person ID</div></div>
+  </div>
+  <div class="search-bar-wrap">
+    <div class="search-bar">
+      <i class="bi bi-search" style="color:var(--muted)"></i>
+      <input id="searchQ" type="text" placeholder="Type last name or first name…" oninput="doSearch(this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <i class="bi bi-x-circle" style="cursor:pointer;color:#ccc;font-size:18px" onclick="clearSearch()"></i>
+    </div>
+  </div>
+  <div class="sw" id="searchResults">
+    <div class="empty-state"><i class="bi bi-person-search"></i><p>Start typing to find a beneficiary</p></div>
+  </div>
+</div>
+
+<!-- ============================
+     FORM
+============================= -->
+<div class="screen" id="screen-form">
+  <div class="app-header">
+    <button class="hdr-back" onclick="confirmExit()"><i class="bi bi-arrow-left" style="font-size:20px"></i></button>
+    <div style="flex:1"><h5>Spot Check Form</h5><div class="sub" id="formBeneName">—</div></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="step-row">
+      <span class="step-name" id="stepLabel">—</span>
+      <span class="step-count" id="stepNum">1 / 10</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:10%"></div></div>
+  </div>
+  <div class="form-body" id="formBody"></div>
+  <div class="bottom-nav">
+    <button class="btn-bk" id="btnBack" onclick="prevStep()"><i class="bi bi-chevron-left"></i> Back</button>
+    <button class="btn-nx" id="btnNext" onclick="nextStep()">Next <i class="bi bi-chevron-right"></i></button>
+  </div>
+</div>
+
+<!-- ============================
+     SYNC
+============================= -->
+<div class="screen" id="screen-sync">
+  <div class="app-header">
+    <button class="hdr-back" onclick="showScreen('screen-home')"><i class="bi bi-arrow-left" style="font-size:20px"></i></button>
+    <div><h5>Sync Records</h5><div class="sub">Upload to Google Sheets</div></div>
+  </div>
+  <div class="sw">
+    <div class="card-panel">
+      <div class="sec-title">Pending Records</div>
+      <div id="syncList"><div class="empty-state" style="padding:16px 0"><i class="bi bi-check-circle-fill" style="font-size:32px;color:var(--green);opacity:.7;display:block;margin-bottom:8px"></i><p style="margin:0;font-size:14px">All records synced!</p></div></div>
+    </div>
+    <button class="btn-pf" onclick="doSyncNow()"><i class="bi bi-cloud-arrow-up" style="font-size:18px"></i>Sync Now</button>
+  </div>
+</div>
+
+</div><!-- /screen-shell -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+'use strict';
+
+// ============================================================
+// CONFIG
+// ============================================================
+const CFG = {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyUk_JynazhP8gmdA9dyTk9HPO08aliardKeCVSC_dv0DEpuH2p2iVT_ndtNFlVzoy9/exec',
+  DB_NAME: 'DSWD_SC',
+  DB_VER:  3
+};
+
+const STEP_NAMES = [
+  'Spot Check Type','Beneficiary Profile','Respondent Information',
+  'Revalidation Findings','Validation Result','Remarks & Observations',
+  'Recommendation','Signatures & Thumbmark','Client Photo','Review & Submit'
+];
+const TOTAL_STEPS = STEP_NAMES.length;
+
+// ============================================================
+// INDEXEDDB
+// ============================================================
+let idb;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(CFG.DB_NAME,CFG.DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('beneficiaries')){
+        const s=d.createObjectStore('beneficiaries',{keyPath:'person_id'});
+        s.createIndex('last_name','last_name',{unique:false});
+        s.createIndex('validator_id','validator_id',{unique:false});
+      }
+      if(!d.objectStoreNames.contains('validations')){
+        const s=d.createObjectStore('validations',{keyPath:'record_id'});
+        s.createIndex('synced','synced',{unique:false});
+        s.createIndex('person_id','person_id',{unique:false});
+      }
+      if(!d.objectStoreNames.contains('kv')){d.createObjectStore('kv',{keyPath:'k'});}
+    };
+    r.onsuccess=e=>{idb=e.target.result;res(idb)};
+    r.onerror=()=>rej(r.error);
+  });
+}
+function tx(store,mode='readonly'){return idb.transaction(store,mode).objectStore(store)}
+function dbGet(store,key){return new Promise((res,rej)=>{const r=tx(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function dbPut(store,val){return new Promise((res,rej)=>{const r=tx(store,'readwrite').put(val);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function dbAll(store){return new Promise((res,rej)=>{const r=tx(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function dbClear(store){return new Promise((res,rej)=>{const r=tx(store,'readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+async function kvGet(k){const r=await dbGet('kv',k);return r?r.v:null}
+async function kvSet(k,v){return dbPut('kv',{k,v})}
+
+async function searchBeneficiaries(q){
+  q=q.toLowerCase().trim();
+  if(!q)return[];
+  return new Promise((res,rej)=>{
+    const results=[];
+    const store=tx('beneficiaries').openCursor();
+    store.onsuccess=e=>{
+      const cursor=e.target.result;
+      if(!cursor||results.length>=30){res(results);return;}
+      const b=cursor.value;
+      const hay=`${b.last_name||''} ${b.first_name||''} ${b.middle_name||''} ${b.person_id||''}`.toLowerCase();
+      if(hay.includes(q))results.push(b);
+      cursor.continue();
+    };
+    store.onerror=()=>rej(store.error);
+  });
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+let CU=null;
+
+async function doLogin(){
+  const user=id('loginUser').value.trim();
+  const pass=id('loginPass').value.trim();
+  if(!user||!pass){toast('Enter username and password','warn');return}
+  showLoading('Logging in…');
+  try{
+    if(navigator.onLine){
+      const r=await gasPost({action:'login',username:user,password:pass});
+      if(r.success){
+        CU=r.user;
+        await kvSet('session',{user:CU,ts:Date.now()});
+        hideLoading();afterLogin();return;
+      }else{hideLoading();toast(r.message||'Invalid credentials','err');return}
+    }
+    // Offline fallback
+    const sess=await kvGet('session');
+    if(sess&&sess.user&&sess.user.username===user){
+      CU=sess.user;hideLoading();afterLogin();
+    }else{hideLoading();toast('Cannot login offline. Connect first.','err')}
+  }catch(e){hideLoading();toast('Login error: '+e.message,'err')}
+}
+
+async function afterLogin(){
+  if(CU.role==='admin'){
+    showScreen('screen-admin');loadAdminStats();
+  }else{
+    id('hName').textContent=CU.name||CU.username;
+    showScreen('screen-home');
+    refreshHomeStats();loadRecentList();
+    if(navigator.onLine)pullBeneficiaries();
+  }
+}
+
+async function doLogout(){
+  if(!confirm('Logout?'))return;
+  CU=null;
+  await kvSet('session',null);
+  showScreen('screen-login');
+  id('loginUser').value='';id('loginPass').value='';
+}
+
+// ============================================================
+// SCREEN NAV
+// ============================================================
+function showScreen(s){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  id(s).classList.add('active');window.scrollTo(0,0);
+}
+function goSearch(){
+  id('searchQ').value='';
+  id('searchResults').innerHTML='<div class="empty-state"><i class="bi bi-person-search"></i><p>Start typing to find a beneficiary</p></div>';
+  showScreen('screen-search');
+  setTimeout(()=>id('searchQ').focus(),300);
+}
+function goSync(){loadSyncScreen();showScreen('screen-sync')}
+
+// ============================================================
+// HOME STATS
+// ============================================================
+async function dbCount(store){
+  return new Promise((res,rej)=>{const r=tx(store).count();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+}
+async function dbCountIndex(store,idxName,val){
+  return new Promise((res,rej)=>{
+    const r=tx(store).index(idxName).count(IDBKeyRange.only(val));
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  });
+}
+async function refreshHomeStats(){
+  // Use count() not dbAll() — much faster on large datasets
+  const totalBene = CU.validator_id
+    ? await dbCountIndex('beneficiaries','validator_id',CU.validator_id)
+    : await dbCount('beneficiaries');
+  const vals      = await dbAll('validations'); // validations per device always small
+  const unsynced  = vals.filter(v=>!v.synced);
+  const done      = vals.length;
+  id('sTotal').textContent    = totalBene;
+  id('sDone').textContent     = done;
+  id('sPending').textContent  = Math.max(0, totalBene - done);
+  id('sUnsynced').textContent = unsynced.length;
+  const sb=id('syncBubble');
+  if(unsynced.length>0){id('syncCount').textContent=unsynced.length;sb.classList.add('show')}
+  else sb.classList.remove('show');
+}
+
+async function loadRecentList(){
+  const vals=await dbAll('validations');
+  const rec=vals.sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,6);
+  const el=id('recentList');
+  if(!rec.length){el.innerHTML='<div class="empty-state" style="padding:16px 0"><i class="bi bi-clipboard-x" style="font-size:28px;display:block;margin-bottom:6px;opacity:.35"></i><p style="margin:0;font-size:13px">No validations yet</p></div>';return}
+  el.innerHTML=rec.map(v=>`
+    <div class="recent-row">
+      <div><div class="recent-name">${v.beneficiaryName||'—'}</div><div class="recent-time">${fmtDate(v.ts)}</div></div>
+      <span class="pill ${v.synced?'pill-green':'pill-orange'}">${v.synced?'Synced':'Pending'}</span>
+    </div>`).join('');
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+async function doSearch(q){
+  if(!q.trim()){id('searchResults').innerHTML='<div class="empty-state"><i class="bi bi-person-search"></i><p>Start typing to find a beneficiary</p></div>';return}
+  const results=await searchBeneficiaries(q);
+  const el=id('searchResults');
+  if(!results.length){el.innerHTML='<div class="empty-state"><i class="bi bi-person-x"></i><p>No beneficiaries found</p></div>';return}
+  el.innerHTML=results.map(b=>`
+    <div class="result-item" onclick="pickBeneficiary('${b.person_id}')">
+      <div class="result-avatar">${(b.last_name||'?')[0].toUpperCase()}</div>
+      <div>
+        <div class="result-name">${b.last_name}, ${b.first_name} ${b.middle_name||''} ${b.ext_name||''}</div>
+        <div class="result-detail"><i class="bi bi-geo-alt"></i> ${b.barangay||''}, ${b.city_mun_name||''} &bull; ${fmtBirthdate(b.birthdate)}</div>
+        <div class="result-detail" style="color:#999;font-size:11px">ID: ${b.person_id||'—'}</div>
+      </div>
+    </div>`).join('');
+}
+function clearSearch(){id('searchQ').value='';doSearch('');id('searchQ').focus()}
+
+async function pickBeneficiary(pid){
+  const b=await dbGet('beneficiaries',pid);
+  if(!b){toast('Beneficiary not found','err');return}
+  const vals=await dbAll('validations');
+  const exists=vals.find(v=>v.person_id===pid);
+  if(exists&&!confirm(`${b.first_name} ${b.last_name} was already validated. Create a new record?`))return;
+  startForm(b);
+}
+
+// ============================================================
+// FORM STATE
+// ============================================================
+let F={};
+let STEP=1;
+
+function startForm(bene){
+  const rid=`SC_${bene.person_id}_${Date.now()}`;
+  F={
+    record_id:      rid,
+    person_id:      bene.person_id,
+    beneficiaryName:`${bene.last_name}, ${bene.first_name}`,
+    bene:           bene,
+    // editable corrections
+    corrections:    {},
+    spotCheckType:  '',
+    respondent:     {},
+    revalidation:   {},
+    validationResult:{},
+    remarks:        '',
+    recommendation: {},
+    signatures:     {},
+    clientPhoto:    null,
+    gps:            null,
+    validator_id:   CU.id||CU.username,
+    validatorName:  CU.name||CU.username,
+    ts:             new Date().toISOString()
+  };
+  STEP=1;
+  id('formBeneName').textContent=`${bene.first_name} ${bene.last_name}`;
+  getGPS();renderStep();showScreen('screen-form');
+}
+
+// ============================================================
+// STEP RENDERER
+// ============================================================
+function renderStep(){
+  const pct=Math.round((STEP/TOTAL_STEPS)*100);
+  id('progFill').style.width=pct+'%';
+  id('stepLabel').textContent=STEP_NAMES[STEP-1];
+  id('stepNum').textContent=`${STEP} / ${TOTAL_STEPS}`;
+  id('btnBack').style.visibility=STEP===1?'hidden':'visible';
+  const nb=id('btnNext');
+  if(STEP===TOTAL_STEPS){
+    nb.innerHTML='<i class="bi bi-check2-circle"></i> Submit';
+    nb.className='btn-sb';nb.onclick=submitForm;
+  }else{
+    nb.innerHTML='Next <i class="bi bi-chevron-right"></i>';
+    nb.className='btn-nx';nb.onclick=nextStep;
+  }
+  id('formBody').innerHTML=buildStep(STEP);
+  initStepExtras(STEP);
+  window.scrollTo(0,0);
+}
+
+function nextStep(){if(!validateStep())return;collectStep();if(STEP<TOTAL_STEPS){STEP++;renderStep()}}
+function prevStep(){collectStep();if(STEP>1){STEP--;renderStep()}}
+function confirmExit(){if(confirm('Exit form? Progress will be lost.'))showScreen('screen-home')}
+
+// ============================================================
+// STEP BUILDERS
+// ============================================================
+function buildStep(s){
+  switch(s){
+    case 1: return s1_Type();
+    case 2: return s2_Beneficiary();
+    case 3: return s3_Respondent();
+    case 4: return s4_Revalidation();
+    case 5: return s5_Result();
+    case 6: return s6_Remarks();
+    case 7: return s7_Recommendation();
+    case 8: return s8_Signatures();
+    case 9: return s9_Photo();
+    case 10:return s10_Review();
+    default:return '';
+  }
+}
+
+// STEP 1
+function s1_Type(){
+  const types=[
+    ['dswd','DSWD FO Initiated'],
+    ['sco_lgu','Requested by SCO, LGU'],
+    ['grievance','In Response to Grievance / Complaint'],
+    ['appeal','Appeal for Reinstatement']
+  ];
+  return`<div class="card-panel">
+    <div class="sec-title">This Spot Check Is</div>
+    <div class="info-box"><i class="bi bi-info-circle-fill"></i>Select the reason for this spot check visit.</div>
+    ${types.map(([v,l])=>`
+      <div class="opt-tile ${F.spotCheckType===v?'on':''}" onclick="pick1('${v}',this)">
+        <input type="radio" name="sct" value="${v}" ${F.spotCheckType===v?'checked':''}><label>${l}</label>
+      </div>`).join('')}
+  </div>`;
+}
+function pick1(v,el){F.spotCheckType=v;document.querySelectorAll('[name="sct"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+
+// STEP 2 — editable fields
+function s2_Beneficiary(){
+  const b=F.bene;
+  const c=F.corrections;
+  const addr=[b.house_number,b.sitio_purok,b.street_name,b.bdivision_or_village].filter(Boolean).join(', ');
+  return`
+  <div class="bene-hero">
+    <div class="bname">${b.last_name}, ${b.first_name} ${b.middle_name||''} ${b.ext_name||''}</div>
+    <div class="bdetail"><i class="bi bi-calendar3"></i>${fmtBirthdate(b.birthdate)} &nbsp;|&nbsp; ${b.sex||'—'} &nbsp;|&nbsp; Age: ${b.age_12312025||'—'}</div>
+    <div class="bdetail" style="margin-top:4px"><i class="bi bi-geo-alt"></i>${b.barangay||''}, ${b.city_mun_name||''}, ${b.province||''}</div>
+    <div class="bdetail" style="margin-top:4px"><i class="bi bi-credit-card-2-front"></i>Person ID: ${b.person_id||'—'}</div>
+  </div>
+  <div class="card-panel">
+    <div class="sec-title">Beneficiary Profile — Verify & Correct</div>
+    <div class="warn-box"><i class="bi bi-pencil-square"></i>Fields are pre-filled. If there is a discrepancy, correct the field below. Changes will be recorded.</div>
+    <div class="tab-2col">
+      <div class="mb12"><label class="f-label">Last Name</label><input class="f-input editable" id="bLN" value="${c.last_name||b.last_name||''}"></div>
+      <div class="mb12"><label class="f-label">First Name</label><input class="f-input editable" id="bFN" value="${c.first_name||b.first_name||''}"></div>
+    </div>
+    <div class="row3 mb12">
+      <div><label class="f-label">Middle Name</label><input class="f-input editable" id="bMN" value="${c.middle_name||b.middle_name||''}"></div>
+      <div><label class="f-label">Ext.</label><input class="f-input editable" id="bEX" value="${c.ext_name||b.ext_name||''}"></div>
+    </div>
+    <div class="row2 mb12">
+      <div><label class="f-label">Birthdate (mm/dd/yyyy)</label><input class="f-input editable" id="bBD" type="date" value="${toInputDate(b.birthdate)||''}"></div>
+      <div><label class="f-label">Sex</label>
+        <select class="f-select" id="bSX">
+          <option value="Male" ${(c.sex||b.sex)==='Male'?'selected':''}>Male</option>
+          <option value="Female" ${(c.sex||b.sex)==='Female'?'selected':''}>Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="mb12"><label class="f-label">Province</label><input class="f-input" value="${b.province||'—'}" readonly></div>
+    <div class="row2 mb12">
+      <div><label class="f-label">City / Municipality</label><input class="f-input" value="${b.city_mun_name||'—'}" readonly></div>
+      <div><label class="f-label">Barangay</label><input class="f-input" value="${b.barangay||'—'}" readonly></div>
+    </div>
+    <div class="mb12"><label class="f-label">House No. / Sitio / Street</label><input class="f-input editable" id="bAD" value="${c.address||addr}"></div>
+  </div>`;
+}
+
+// STEP 3
+function s3_Respondent(){
+  const r=F.respondent||{};
+  const rels=['Spouse','Child','Siblings','Caretaker','Others'];
+  return`<div class="card-panel">
+    <div class="sec-title">I. Name of Respondent</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Person being interviewed. May be the beneficiary, family, or caretaker.</p>
+    <div class="mb12"><label class="f-label">Last Name <span style="color:var(--red)">*</span></label><input class="f-input" id="rLN" value="${r.lastName||''}" placeholder="Last Name"></div>
+    <div class="mb12"><label class="f-label">First Name <span style="color:var(--red)">*</span></label><input class="f-input" id="rFN" value="${r.firstName||''}" placeholder="First Name"></div>
+    <div class="row3 mb12">
+      <div><label class="f-label">Middle Name</label><input class="f-input" id="rMN" value="${r.middleName||''}" placeholder="Middle Name"></div>
+      <div><label class="f-label">Ext.</label><input class="f-input" id="rEX" value="${r.extension||''}" placeholder="Jr./Sr."></div>
+    </div>
+  </div>
+  <div class="card-panel">
+    <div class="sec-title">II. Relationship to Beneficiary</div>
+    <div class="row2">
+      ${rels.map(rel=>`
+        <div class="opt-tile sm ${r.relationship===rel?'on':''}" onclick="pickRel('${rel}',this)">
+          <input type="radio" name="rel" value="${rel}" ${r.relationship===rel?'checked':''}><label>${rel}</label>
+        </div>`).join('')}
+    </div>
+    <div id="relOtherWrap" class="cond-box ${r.relationship==='Others'?'show':''}">
+      <label class="f-label">Specify Relationship</label>
+      <input class="f-input" id="rOT" value="${r.othersText||''}" placeholder="Relationship…">
+    </div>
+  </div>
+  <div class="card-panel">
+    <div class="sec-title">Contact Details</div>
+    <div class="mb12">
+      <label class="f-label">Contact Number</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:12px 10px;font-weight:700;font-size:15px">09</span>
+        <input class="f-input" id="rCN" type="tel" maxlength="9" value="${(r.contactNumber||'').replace(/^09/,'')}" placeholder="XX-XXX-XXXX" style="flex:1">
+      </div>
+    </div>
+    <div>
+      <label class="f-label">Sex</label>
+      <div class="row2">
+        <div class="opt-tile sm ${r.sex==='Female'?'on':''}" onclick="pickSex('Female',this)">
+          <input type="radio" name="sex" value="Female" ${r.sex==='Female'?'checked':''}><label><i class="bi bi-gender-female"></i> Female</label>
+        </div>
+        <div class="opt-tile sm ${r.sex==='Male'?'on':''}" onclick="pickSex('Male',this)">
+          <input type="radio" name="sex" value="Male" ${r.sex==='Male'?'checked':''}><label><i class="bi bi-gender-male"></i> Male</label>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function pickRel(v,el){F.respondent.relationship=v;document.querySelectorAll('[name="rel"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on');id('relOtherWrap').classList.toggle('show',v==='Others')}
+function pickSex(v,el){F.respondent.sex=v;document.querySelectorAll('[name="sex"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+
+// STEP 4
+function s4_Revalidation(){
+  const rv=F.revalidation||{};
+  return`<div class="card-panel">
+    <div class="sec-title">IV. Area for Revalidation</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Check all conditions that apply.</p>
+    <div class="opt-tile ${rv.otherPension?'on':''}" onclick="togRV('otherPension','rvOP',this)">
+      <input type="checkbox" ${rv.otherPension?'checked':''}><label>Receiving pension from other government agencies</label>
+    </div>
+    <div class="cond-box ${rv.otherPension?'show':''}" id="rvOP">
+      <label class="f-label">Agency</label>
+      <select class="f-select" id="rvOPa" style="margin-bottom:10px">
+        <option value="">Select agency</option>
+        ${['SSS','GSIS','PVAO','Others'].map(a=>`<option value="${a}" ${rv.opAgency===a?'selected':''}>${a}</option>`).join('')}
+      </select>
+      <label class="f-label">Pension Type</label>
+      <select class="f-select" id="rvOPt" style="margin-bottom:10px">
+        <option value="">Select type</option>
+        ${['Principal Pensioner','Survivor Pensioner','Complete Lumpsum','Incomplete Lumpsum','Disability Pensioner','Guardian Pensioner'].map(t=>`<option value="${t}" ${rv.opType===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <label class="f-label">Amount (PHP)</label>
+      <input class="f-input" type="number" id="rvOPamt" value="${rv.opAmount||''}" placeholder="0.00">
+    </div>
+    <div class="opt-tile ${rv.familySupport?'on':''}" onclick="togRV('familySupport','rvFS',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.familySupport?'checked':''}><label>Has regular support from family / relatives</label>
+    </div>
+    <div class="cond-box ${rv.familySupport?'show':''}" id="rvFS">
+      <label class="f-label">Frequency</label>
+      <div class="row2" style="margin-bottom:10px">
+        <div class="opt-tile sm ${rv.fsFreq==='Monthly'?'on':''}" onclick="pickFreq('Monthly',this)"><input type="radio" name="fsf"><label>Monthly</label></div>
+        <div class="opt-tile sm ${rv.fsFreq==='Bi-Monthly'?'on':''}" onclick="pickFreq('Bi-Monthly',this)"><input type="radio" name="fsf"><label>Bi-Monthly</label></div>
+      </div>
+      <label class="f-label">Amount (PHP)</label>
+      <input class="f-input" type="number" id="rvFSamt" value="${rv.fsAmount||''}" placeholder="0.00">
+    </div>
+    <div class="opt-tile ${rv.regularIncome?'on':''}" onclick="togRV('regularIncome','rvRI',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.regularIncome?'checked':''}><label>Has regular source of income</label>
+    </div>
+    <div class="cond-box ${rv.regularIncome?'show':''}" id="rvRI">
+      <label class="f-label">Source</label>
+      <div class="row2" style="margin-bottom:10px">
+        <div class="opt-tile sm ${rv.incSource==='Salary/Wages'?'on':''}" onclick="pickInc('Salary/Wages',this)"><input type="radio" name="inc"><label>Salary/Wages</label></div>
+        <div class="opt-tile sm ${rv.incSource==='Business'?'on':''}" onclick="pickInc('Business',this)"><input type="radio" name="inc"><label>Business Profits</label></div>
+      </div>
+      <label class="f-label">Specify</label>
+      <input class="f-input" id="rvRIspec" value="${rv.incSpec||''}" placeholder="Specify source…" style="margin-bottom:10px">
+      <label class="f-label">Amount (PHP)</label>
+      <input class="f-input" type="number" id="rvRIamt" value="${rv.incAmount||''}" placeholder="0.00">
+    </div>
+    <div class="opt-tile ${rv.isDeceased?'on':''}" onclick="togRV('isDeceased','rvDD',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.isDeceased?'checked':''}><label>Beneficiary is dead / deceased</label>
+    </div>
+    <div class="cond-box ${rv.isDeceased?'show':''}" id="rvDD">
+      <label class="f-label">Date of Death (mm/dd/yyyy)</label>
+      <input class="f-input" type="date" id="rvDDdate" value="${rv.dateOfDeath||''}" style="margin-bottom:10px">
+      <label class="f-label">Supporting Document</label>
+      <select class="f-select" id="rvDDdoc">
+        <option value="">Select document</option>
+        ${['Death Certificate','Barangay Certificate','LSWDO Certificate','LCR Certificate'].map(d=>`<option value="${d}" ${rv.decDoc===d?'selected':''}>${d}</option>`).join('')}
+      </select>
+    </div>
+    <div class="opt-tile ${rv.absent?'on':''}" onclick="togRV('absent','rvAB',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.absent?'checked':''}><label>Beneficiary is absent during payout</label>
+    </div>
+    <div class="cond-box ${rv.absent?'show':''}" id="rvAB">
+      <label class="f-label">Reason</label>
+      <div class="row2" style="margin-bottom:10px">
+        <div class="opt-tile sm ${rv.absReason==='Transfer'?'on':''}" onclick="pickAbs('Transfer',this)"><input type="radio" name="abr"><label>Transfer of Residence</label></div>
+        <div class="opt-tile sm ${rv.absReason==='Not Present'?'on':''}" onclick="pickAbs('Not Present',this)"><input type="radio" name="abr"><label>Not in Current Address</label></div>
+      </div>
+      <label class="f-label">When</label>
+      <input class="f-input" id="rvABwhen" value="${rv.absWhen||''}" placeholder="When?" style="margin-bottom:10px">
+      <label class="f-label">Where</label>
+      <input class="f-input" id="rvABwhere" value="${rv.absWhere||''}" placeholder="Location" style="margin-bottom:10px">
+      <label class="f-label">Details</label>
+      <textarea class="f-input" id="rvABdet" rows="2" placeholder="Details…">${rv.absDetails||''}</textarea>
+    </div>
+    <div class="opt-tile ${rv.fraud?'on':''}" onclick="togRV('fraud','rvFR',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.fraud?'checked':''}><label>With fraud / fake IDs</label>
+    </div>
+    <div class="cond-box ${rv.fraud?'show':''}" id="rvFR">
+      <label class="f-label">Specify</label>
+      <input class="f-input" id="rvFRspec" value="${rv.fraudSpec||''}" placeholder="Describe…">
+    </div>
+  </div>`;
+}
+function togRV(field,boxId,el){F.revalidation[field]=!F.revalidation[field];el.classList.toggle('on');el.querySelector('input[type="checkbox"]').checked=F.revalidation[field];id(boxId).classList.toggle('show',F.revalidation[field])}
+function pickFreq(v,el){F.revalidation.fsFreq=v;document.querySelectorAll('[name="fsf"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+function pickInc(v,el){F.revalidation.incSource=v;document.querySelectorAll('[name="inc"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+function pickAbs(v,el){F.revalidation.absReason=v;document.querySelectorAll('[name="abr"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+
+// STEP 5
+function s5_Result(){
+  const vr=F.validationResult||{};
+  return`<div class="card-panel">
+    <div class="sec-title">Validation Result — Database Match</div>
+    <div class="opt-tile ${vr.notMatched?'on':''}" onclick="togVR('notMatched',null,this)">
+      <input type="checkbox" ${vr.notMatched?'checked':''}><label>NOT matched in any database</label>
+    </div>
+    <div style="margin-top:14px"><label class="f-label" style="margin-bottom:10px">Matched in:</label>
+      ${['SSS','GSIS','PVAO'].map(a=>`
+        <div class="opt-tile ${vr['m_'+a]?'on':''}" onclick="togVRa('${a}',this)">
+          <input type="checkbox" ${vr['m_'+a]?'checked':''}><label><strong>${a}</strong></label>
+        </div>
+        <div class="cond-box ${vr['m_'+a]?'show':''}" id="box_${a}">
+          <label class="f-label">Pension Type</label>
+          <select class="f-select" id="pt_${a}" style="margin-bottom:10px">
+            <option value="">Select type</option>
+            ${['Principal Pensioner','Survivor Pensioner','Complete Lumpsum','Incomplete Lumpsum','Disability Pensioner','Guardian Pensioner'].map(t=>`<option value="${t}" ${vr['pt_'+a]===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+          <label class="f-label">Amount (PHP)</label>
+          <input class="f-input" type="number" id="pa_${a}" value="${vr['pa_'+a]||''}" placeholder="0.00">
+        </div>`).join('')}
+      <div class="opt-tile ${vr.m_Others?'on':''}" onclick="togVR('m_Others','box_Others',this)" style="margin-top:8px">
+        <input type="checkbox" ${vr.m_Others?'checked':''}><label>Others</label>
+      </div>
+      <div class="cond-box ${vr.m_Others?'show':''}" id="box_Others">
+        <input class="f-input" id="ot_Others" value="${vr.ot_Others||''}" placeholder="Specify agency…">
+      </div>
+    </div>
+  </div>`;
+}
+function togVR(field,boxId,el){F.validationResult[field]=!F.validationResult[field];el.classList.toggle('on');el.querySelector('input[type="checkbox"]').checked=F.validationResult[field];if(boxId)id(boxId).classList.toggle('show',F.validationResult[field])}
+function togVRa(a,el){const k='m_'+a;F.validationResult[k]=!F.validationResult[k];el.classList.toggle('on');el.querySelector('input[type="checkbox"]').checked=F.validationResult[k];id('box_'+a).classList.toggle('show',F.validationResult[k])}
+function pickDiscSex(v,el){F.validationResult.discSex=v;document.querySelectorAll('[name="discSex"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+function pickSalFreq(v,el){F.validationResult.salaryFreq=v;document.querySelectorAll('[name="salFreq"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+
+// STEP 6
+function s6_Remarks(){
+  return`<div class="card-panel">
+    <div class="sec-title">V. Remarks and Observations</div>
+    <textarea class="f-input" id="remarksTA" rows="9" placeholder="Enter remarks and observations…" style="resize:none">${F.remarks||''}</textarea>
+  </div>`;
+}
+
+// STEP 7
+function s7_Recommendation(){
+  const rec=F.recommendation||{};
+  const opts=[
+    ['retention','For Retention','bi-check-circle-fill','var(--green)'],
+    ['reinstatement','For Reinstatement','bi-arrow-repeat','#0dcaf0'],
+    ['delisting','For Delisting','bi-x-circle-fill','var(--red)'],
+    ['transfer','For Transfer','bi-arrow-right-circle-fill','var(--orange)']
+  ];
+  return`<div class="card-panel">
+    <div class="sec-title">VI. Recommendation</div>
+    ${opts.map(([v,l,ic,cl])=>`
+      <div class="opt-tile ${rec.type===v?'on':''}" onclick="pickRec('${v}',this)" style="margin-bottom:10px">
+        <input type="radio" name="rec" value="${v}" ${rec.type===v?'checked':''}>
+        <label><i class="bi ${ic}" style="color:${cl};font-size:18px;margin-right:6px"></i>${l}</label>
+      </div>`).join('')}
+    <div style="margin-top:6px">
+      <label class="f-label">Others / Notes</label>
+      <input class="f-input" id="recOthers" value="${rec.others||''}" placeholder="Specify if others…">
+    </div>
+  </div>`;
+}
+function pickRec(v,el){F.recommendation.type=v;document.querySelectorAll('[name="rec"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+
+// STEP 8 — using <label> for file inputs (reliable mobile camera)
+function s8_Signatures(){
+  const sg=F.signatures||{};
+  return`<div class="card-panel">
+    <div class="sec-title">Respondent Signature</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Hand device to respondent. Sign with finger.</p>
+    <div class="sig-wrap" id="sw_resp">
+      <canvas class="sig-canvas" id="sc_resp" height="140"></canvas>
+      <div class="sig-hint" id="sh_resp"><i class="bi bi-pen"></i>Sign here with finger</div>
+    </div>
+    <button class="btn-clr" onclick="clearSig('sc_resp','sh_resp')"><i class="bi bi-eraser"></i> Clear</button>
+  </div>
+  <div class="card-panel" style="margin-top:12px">
+    <div class="sec-title">Beneficiary Thumbmark</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
+      <strong>Step 1:</strong> Beneficiary places wet ink thumbmark on paper.<br>
+      <strong>Step 2:</strong> Tap below to photograph the thumbmark.
+    </p>
+    <label class="photo-label" for="thumbInput">
+      <div class="photo-zone ${sg.thumbmarkPhoto?'filled':''}">
+        ${sg.thumbmarkPhoto
+          ?`<img src="${sg.thumbmarkPhoto}" alt="thumbmark">`
+          :`<div class="photo-ph"><i class="bi bi-hand-index-thumb"></i><p>Tap to photograph thumbmark</p><small>Wet ink thumbmark on paper</small></div>`}
+      </div>
+    </label>
+    ${sg.thumbmarkPhoto?`<label for="thumbInput" style="display:inline-block;margin-top:8px"><span class="btn-clr"><i class="bi bi-arrow-repeat"></i> Retake</span></label>`:''}
+  </div>
+  <div class="card-panel" style="margin-top:12px">
+    <div class="sec-title">Witnessed By</div>
+    <div class="mb12"><label class="f-label">Witness Name</label><input class="f-input" id="wname" value="${sg.witnessName||''}" placeholder="Full name of witness"></div>
+    <div class="mb12"><label class="f-label">Designation</label><input class="f-input" id="wdesig" value="${sg.witnessDesignation||''}" placeholder="Position / designation"></div>
+    <div class="sig-wrap" id="sw_wit">
+      <canvas class="sig-canvas" id="sc_wit" height="120"></canvas>
+      <div class="sig-hint" id="sh_wit"><i class="bi bi-pen"></i>Witness signs here</div>
+    </div>
+    <button class="btn-clr" onclick="clearSig('sc_wit','sh_wit')"><i class="bi bi-eraser"></i> Clear</button>
+  </div>
+  <div class="card-panel" style="margin-top:12px">
+    <div class="sec-title">Interviewed By (Validator)</div>
+    <div class="mb12"><label class="f-label">Validator</label><input class="f-input" value="${CU.name||CU.username}" readonly></div>
+    <div class="sig-wrap" id="sw_val">
+      <canvas class="sig-canvas" id="sc_val" height="120"></canvas>
+      <div class="sig-hint" id="sh_val"><i class="bi bi-pen"></i>Validator signs here</div>
+    </div>
+    <button class="btn-clr" onclick="clearSig('sc_val','sh_val')"><i class="bi bi-eraser"></i> Clear</button>
+  </div>`;
+}
+
+// STEP 9
+function s9_Photo(){
+  return`<div class="card-panel">
+    <div class="sec-title">Client Photo</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Take a live photo of the beneficiary to confirm presence during validation.</p>
+    <label class="photo-label" for="clientInput">
+      <div class="photo-zone ${F.clientPhoto?'filled':''}">
+        ${F.clientPhoto
+          ?`<img src="${F.clientPhoto}" alt="client photo">`
+          :`<div class="photo-ph"><i class="bi bi-camera"></i><p>Tap to take photo</p><small>Face camera toward beneficiary</small></div>`}
+      </div>
+    </label>
+    ${F.clientPhoto?`<label for="clientInput" style="display:inline-block;margin-top:8px"><span class="btn-clr"><i class="bi bi-arrow-repeat"></i> Retake Photo</span></label>`:''}
+  </div>
+  <div class="card-panel" style="margin-top:12px">
+    <div class="sec-title">GPS Location</div>
+    <div id="gpsBlock">
+      ${F.gps
+        ?`<div class="gps-block"><i class="bi bi-geo-alt-fill gps-icon" style="color:var(--green)"></i><div><div style="font-weight:700;color:var(--green)">Location Captured</div><div style="font-size:12px;color:var(--muted)">${F.gps.lat.toFixed(6)}, ${F.gps.lng.toFixed(6)}</div><div style="font-size:12px;color:var(--muted)">Accuracy: ±${Math.round(F.gps.acc)}m</div></div></div>`
+        :`<div class="gps-block pending"><i class="bi bi-geo-alt gps-icon" style="color:var(--orange)"></i><div style="font-weight:600;color:var(--orange)">Acquiring location…</div></div>`}
+    </div>
+    <button class="btn-clr" style="margin-top:10px" onclick="getGPS()"><i class="bi bi-arrow-repeat"></i> Refresh GPS</button>
+  </div>`;
+}
+
+// STEP 10 — Review
+function s10_Review(){
+  const b=F.bene,r=F.respondent||{},rv=F.revalidation||{},vr=F.validationResult||{},rc=F.recommendation||{},sg=F.signatures||{};
+  const flags=['otherPension','familySupport','regularIncome','isDeceased','absent','fraud'].filter(k=>rv[k]).map(k=>({otherPension:'Other Pension',familySupport:'Family Support',regularIncome:'Regular Income',isDeceased:'Deceased',absent:'Absent',fraud:'Fraud/Fake ID'}[k]));
+  const matched=['SSS','GSIS','PVAO','Others'].filter(a=>vr['m_'+a]);
+  return`<div class="card-panel">
+    <div class="sec-title">Review Before Submitting</div>
+    ${navigator.onLine?`<div class="submit-notice online"><i class="bi bi-wifi"></i>Online — will sync immediately.</div>`:`<div class="submit-notice offline"><i class="bi bi-wifi-off"></i>Offline — saved locally, synced when connected.</div>`}
+    ${[
+      ['Person ID',      b.person_id||'—'],
+      ['Spot Check Type',fmtSCT(F.spotCheckType)],
+      ['Beneficiary',    `${b.last_name}, ${b.first_name}`],
+      ['Address',        `${b.barangay}, ${b.city_mun_name}`],
+      ['Birthdate',      fmtBirthdate(b.birthdate)],
+      ['Respondent',     `${r.lastName||'—'}, ${r.firstName||'—'}`],
+      ['Relationship',   r.relationship||'—'],
+      ['Revalidation',   flags.length?flags.join(', '):'None'],
+      ['DB Match',       vr.notMatched?'Not Matched':(matched.length?matched.join(', '):'Not specified')],
+      ['Recommendation', fmtRec(rc.type)],
+      ['Respondent Sig', sg.respondent?'✅ Captured':'❌ Missing'],
+      ['Thumbmark',      sg.thumbmarkPhoto?'✅ Captured':'❌ Missing'],
+      ['Validator Sig',  sg.validator?'✅ Captured':'❌ Missing'],
+      ['Client Photo',   F.clientPhoto?'✅ Captured':'⚠️ Not taken'],
+      ['GPS',            F.gps?`${F.gps.lat.toFixed(4)}, ${F.gps.lng.toFixed(4)}`:'⚠️ Not captured'],
+      ['Validator',      CU.name||CU.username],
+      ['Date/Time',      fmtDate(F.ts)]
+    ].map(([l,v])=>`<div class="review-row"><div class="rlabel">${l}</div><div class="rvalue">${v}</div></div>`).join('')}
+  </div>`;
+}
+
+// ============================================================
+// STEP EXTRAS (canvas init)
+// ============================================================
+function initStepExtras(s){
+  if(s===8){
+    setTimeout(()=>{
+      ['resp','wit','val'].forEach(k=>{
+        initCanvas(`sc_${k}`,`sh_${k}`);
+        if(F.signatures[k])restoreCanvas(`sc_${k}`,`sh_${k}`,F.signatures[k]);
+      });
+    },80);
+  }
+}
+
+// ============================================================
+// CANVAS SIGNATURES
+// ============================================================
+function initCanvas(cid,hid){
+  const c=id(cid);if(!c)return;
+  c.width=c.offsetWidth;
+  const ctx=c.getContext('2d');
+  ctx.strokeStyle='#1a1f36';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false,lx=0,ly=0;
+  function pos(e){
+    const r=c.getBoundingClientRect(),sx=c.width/r.width,sy=c.height/r.height;
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-r.left)*sx,y:(src.clientY-r.top)*sy};
+  }
+  function start(e){e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;id(hid)?.classList.add('gone')}
+  function move(e){e.preventDefault();if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y}
+  function stop(){drawing=false}
+  c.addEventListener('mousedown',start);c.addEventListener('touchstart',start,{passive:false});
+  c.addEventListener('mousemove',move);c.addEventListener('touchmove',move,{passive:false});
+  c.addEventListener('mouseup',stop);c.addEventListener('touchend',stop);
+}
+function clearSig(cid,hid){const c=id(cid);if(!c)return;c.getContext('2d').clearRect(0,0,c.width,c.height);id(hid)?.classList.remove('gone')}
+function restoreCanvas(cid,hid,dataUrl){const c=id(cid);if(!c||!dataUrl)return;const img=new Image();img.onload=()=>{c.getContext('2d').drawImage(img,0,0);id(hid)?.classList.add('gone')};img.src=dataUrl}
+function canvasData(cid){const c=id(cid);if(!c)return null;const px=c.getContext('2d').getImageData(0,0,c.width,c.height).data;if(!px.some(v=>v!==0))return null;return c.toDataURL('image/png')}
+
+// ============================================================
+// PHOTO CAPTURE
+// ============================================================
+function handleCapture(e,type){
+  const file=e.target.files[0];if(!file)return;
+  const maxDim=type==='thumbmark'?800:1200;
+  compressImg(file,maxDim,.85,dataUrl=>{
+    if(type==='thumbmark')F.signatures.thumbmarkPhoto=dataUrl;
+    else F.clientPhoto=dataUrl;
+    e.target.value=''; // reset so same photo can be retaken
+    renderStep();
+  });
+}
+function compressImg(file,maxDim,quality,cb){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxDim||h>maxDim){if(w>h){h=Math.round(h*maxDim/w);w=maxDim}else{w=Math.round(w*maxDim/h);h=maxDim}}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cb(cv.toDataURL('image/jpeg',quality));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============================================================
+// GPS
+// ============================================================
+function getGPS(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      F.gps={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy,t:Date.now()};
+      const gb=id('gpsBlock');
+      if(gb)gb.innerHTML=`<div class="gps-block"><i class="bi bi-geo-alt-fill gps-icon" style="color:var(--green)"></i><div><div style="font-weight:700;color:var(--green)">Location Captured</div><div style="font-size:12px;color:var(--muted)">${F.gps.lat.toFixed(6)}, ${F.gps.lng.toFixed(6)}</div><div style="font-size:12px;color:var(--muted)">Accuracy: ±${Math.round(F.gps.acc)}m</div></div></div>`;
+    },
+    err=>console.warn('GPS:',err),
+    {enableHighAccuracy:true,timeout:12000,maximumAge:60000}
+  );
+}
+
+// ============================================================
+// COLLECT STEP DATA
+// ============================================================
+function collectStep(){
+  const g=eid=>{const e=id(eid);return e?e.value:''};
+  switch(STEP){
+    case 2:
+      F.corrections={
+        last_name:g('bLN'),first_name:g('bFN'),middle_name:g('bMN'),
+        ext_name:g('bEX'),birthdate:g('bBD'),sex:g('bSX'),address:g('bAD')
+      };
+      break;
+    case 3:
+      F.respondent={...F.respondent,lastName:g('rLN'),firstName:g('rFN'),
+        middleName:g('rMN'),extension:g('rEX'),contactNumber:'09'+g('rCN'),othersText:g('rOT')};
+      break;
+    case 4:
+      const rv=F.revalidation;
+      if(rv.otherPension){rv.opAgency=g('rvOPa');rv.opType=g('rvOPt');rv.opAmount=g('rvOPamt')}
+      if(rv.familySupport){rv.fsAmount=g('rvFSamt')}
+      if(rv.regularIncome){rv.incSpec=g('rvRIspec');rv.incAmount=g('rvRIamt')}
+      if(rv.isDeceased){rv.dateOfDeath=g('rvDDdate');rv.decDoc=g('rvDDdoc')}
+      if(rv.absent){rv.absWhen=g('rvABwhen');rv.absWhere=g('rvABwhere');rv.absDetails=g('rvABdet')}
+      if(rv.fraud){rv.fraudSpec=g('rvFRspec')}
+      rv.locAddress=g('locAddress'); rv.locNew=g('locNew');
+      rv.movsRef=g('movsRef'); rv.pcnNumber=g('pcnNumber');
+      break;
+    case 5:
+      const vr=F.validationResult;
+      ['SSS','GSIS','PVAO'].forEach(a=>{if(vr['m_'+a]){vr['pt_'+a]=g('pt_'+a);vr['pa_'+a]=g('pa_'+a)}});
+      if(vr.m_Others)vr.ot_Others=g('ot_Others');
+      vr.discName=g('discName'); vr.discField=g('discField');
+      vr.salaryAmount=g('salaryAmount');
+      break;
+    case 6: F.remarks=g('remarksTA');break;
+    case 7: F.recommendation={...F.recommendation,others:g('recOthers')};break;
+    case 8:
+      F.signatures={...F.signatures,
+        respondent:canvasData('sc_resp'),witness:canvasData('sc_wit'),validator:canvasData('sc_val'),
+        witnessName:g('wname'),witnessDesignation:g('wdesig')};
+      break;
+  }
+}
+
+// ============================================================
+// VALIDATION PER STEP
+// ============================================================
+function validateStep(){
+  switch(STEP){
+    case 1: if(!F.spotCheckType){toast('Select the spot check type','warn');return false}break;
+    case 3:
+      if(!id('rLN')?.value.trim()||!id('rFN')?.value.trim()){toast('Enter respondent name','warn');return false}
+      if(!F.respondent?.relationship){toast('Select relationship to beneficiary','warn');return false}
+      break;
+    case 7: if(!F.recommendation?.type){toast('Select a recommendation','warn');return false}break;
+    case 9: if(!F.clientPhoto){if(!confirm('No client photo taken. Continue anyway?'))return false}break;
+  }
+  return true;
+}
+
+// ============================================================
+// SUBMIT
+// ============================================================
+async function submitForm(){
+  collectStep();
+  showLoading('Saving record…');
+  try{
+    const record={...F,synced:false,submittedAt:new Date().toISOString()};
+    await dbPut('validations',record);
+    if(navigator.onLine){
+      try{showLoading('Syncing…');await syncRecord(record)}catch(e){console.warn('Sync failed, saved locally')}
+    }
+    hideLoading();toast('✅ Record saved!','ok');
+    setTimeout(()=>{showScreen('screen-home');refreshHomeStats();loadRecentList()},1400);
+  }catch(e){
+    hideLoading();toast('Saved locally — syncs when online','warn');
+    setTimeout(()=>{showScreen('screen-home');refreshHomeStats()},1400);
+  }
+}
+
+// ============================================================
+// SYNC — with duplicate prevention via record_id
+// ============================================================
+async function syncRecord(rec){
+  const b=rec.bene||{};
+  // Upload files to Drive
+  const uploads={};
+  const files=[
+    ['clientPhotoUrl',rec.clientPhoto,`client.jpg`],
+    ['thumbmarkUrl',rec.signatures?.thumbmarkPhoto,`thumbmark.jpg`],
+    ['sigRespondentUrl',rec.signatures?.respondent,`sig_respondent.png`],
+    ['sigValidatorUrl',rec.signatures?.validator,`sig_validator.png`],
+    ['sigWitnessUrl',rec.signatures?.witness,`sig_witness.png`]
+  ];
+  for(const[key,data,fname]of files){
+    if(!data)continue;
+    try{
+      const r=await gasPost({
+        action:'uploadFile',
+        filename:fname,
+        data:data.split(',')[1],
+        mime:data.split(':')[1].split(';')[0],
+        province:b.province||'',
+        lgu:b.city_mun_name||'',
+        barangay:b.barangay||'',
+        beneficiaryFolder:buildBeneFolderName(b)
+      });
+      if(r.url)uploads[key]=r.url;
+    }catch(e){}
+  }
+  // Submit record (no base64)
+  const payload={
+    action:'submitValidation',
+    record:{
+      record_id:     rec.record_id,
+      person_id:     rec.person_id,
+      beneficiaryName:rec.beneficiaryName,
+      validator_id:  rec.validator_id,
+      validatorName: rec.validatorName,
+      spotCheckType: fmtSCT(rec.spotCheckType),
+      ts:            rec.ts,
+      submittedAt:   rec.submittedAt,
+      // Beneficiary details + corrections
+      last_name:     rec.corrections?.last_name||rec.bene?.last_name||'',
+      first_name:    rec.corrections?.first_name||rec.bene?.first_name||'',
+      middle_name:   rec.corrections?.middle_name||rec.bene?.middle_name||'',
+      ext_name:      rec.corrections?.ext_name||rec.bene?.ext_name||'',
+      birthdate:     fmtBirthdate(rec.corrections?.birthdate||rec.bene?.birthdate),
+      sex:           rec.corrections?.sex||rec.bene?.sex||'',
+      province:      rec.bene?.province||'',
+      city_mun_name: rec.bene?.city_mun_name||'',
+      barangay:      rec.bene?.barangay||'',
+      region:        rec.bene?.region||'',
+      sitio_purok:   rec.bene?.sitio_purok||'',
+      // Respondent
+      respondentName:`${rec.respondent?.lastName||''}, ${rec.respondent?.firstName||''}`,
+      relationship:  rec.respondent?.relationship||'',
+      contactNumber: rec.respondent?.contactNumber||'',
+      respondentSex: rec.respondent?.sex||'',
+      // Revalidation
+      revalidation:  JSON.stringify(rec.revalidation||{}),
+      validationResult:JSON.stringify(rec.validationResult||{}),
+      movsRef:       rec.revalidation?.movsRef||'',
+      pcnNumber:     rec.revalidation?.pcnNumber||'',
+      locAddress:    rec.revalidation?.locAddress||'',
+      locNew:        rec.revalidation?.locNew||'',
+      remarks:       rec.remarks||'',
+      recommendation:fmtRec(rec.recommendation?.type),
+      recOthers:     rec.recommendation?.others||'',
+      // GPS
+      gpsLat:        rec.gps?.lat||'',
+      gpsLng:        rec.gps?.lng||'',
+      gpsAcc:        rec.gps?.acc||'',
+      // Signatures
+      witnessName:   rec.signatures?.witnessName||'',
+      witnessDesig:  rec.signatures?.witnessDesignation||'',
+      hasCorrections:JSON.stringify(rec.corrections||{}),
+      ...uploads
+    }
+  };
+  const r=await gasPost(payload);
+  if(r.success){
+    rec.synced=true;rec.syncedAt=new Date().toISOString();
+    await dbPut('validations',rec);
+  }
+}
+
+function buildBeneFolderName(b){
+  const p3=slug(b.province||'Unk',3);
+  const l3=slug(b.city_mun_name||'Unk',3);
+  const br3=slug(b.barangay||'Unk',3);
+  const ln=(b.last_name||'').toUpperCase().replace(/\s/g,'-');
+  const fn=(b.first_name||'').toUpperCase().replace(/\s/g,'-');
+  const mi=((b.middle_name||' ')[0]).toUpperCase();
+  const bd=fmtBirthdate(b.birthdate).replace(/\//g,'-');
+  return`${p3}-${l3}-${br3}-${ln}-${fn}-${mi}_${bd}`;
+}
+function slug(str,len){return str.replace(/[^a-zA-Z]/g,'').substring(0,len)}
+
+async function doSyncNow(){
+  if(!navigator.onLine){toast('No internet connection','err');return}
+  showLoading('Syncing…');
+  const vals=await dbAll('validations');
+  const pending=vals.filter(v=>!v.synced);
+  if(!pending.length){hideLoading();toast('All records already synced!','ok');return}
+  let ok=0;
+  for(const r of pending){try{await syncRecord(r);ok++}catch(e){}}
+  hideLoading();toast(`✅ Synced ${ok} of ${pending.length} records`,'ok');
+  loadSyncScreen();refreshHomeStats();loadRecentList();
+}
+
+async function loadSyncScreen(){
+  const vals=await dbAll('validations');
+  const pending=vals.filter(v=>!v.synced);
+  const el=id('syncList');
+  if(!pending.length){el.innerHTML='<div class="empty-state" style="padding:16px 0"><i class="bi bi-check-circle-fill" style="font-size:32px;color:var(--green);opacity:.8;display:block;margin-bottom:8px"></i><p style="margin:0;font-size:14px">All records synced!</p></div>';return}
+  el.innerHTML=pending.map(v=>`
+    <div class="sync-row">
+      <div><div style="font-size:14px;font-weight:700">${v.beneficiaryName||'—'}</div><div style="font-size:11px;color:var(--muted)">${fmtDate(v.submittedAt)}</div></div>
+      <span class="pill pill-orange">Pending</span>
+    </div>`).join('');
+}
+
+async function pullBeneficiaries(){
+  try{
+    const BATCH=500;
+    let offset=0, total=0, cleared=false;
+    showLoading('Loading beneficiaries…');
+    while(true){
+      const url=`${CFG.GAS_URL}?action=getBeneficiaries&validator_id=${CU.validator_id||CU.id}&offset=${offset}&limit=${BATCH}`;
+      const r=await fetch(url);
+      const d=await r.json();
+      if(!d.success||!d.data||!d.data.length)break;
+      if(!cleared){await dbClear('beneficiaries');cleared=true;}
+      for(const b of d.data)await dbPut('beneficiaries',b);
+      total+=d.data.length;
+      offset+=BATCH;
+      showLoading(`Loading… ${total} beneficiaries`);
+      if(d.data.length<BATCH)break; // last page
+    }
+    hideLoading();
+    if(total>0){toast(`📥 ${total} beneficiaries loaded`,'ok');refreshHomeStats();}
+  }catch(e){hideLoading();console.warn('Pull beneficiaries:',e)}
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+async function loadAdminStats(){
+  if(!navigator.onLine)return;
+  try{
+    const r=await fetch(`${CFG.GAS_URL}?action=getStats`);
+    const d=await r.json();
+    id('adminBeneCount').textContent=d.beneficiaries??'—';
+    id('adminValCount').textContent=d.validations??'—';
+  }catch(e){}
+}
+
+function handleCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  showLoading('Processing CSV…');
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    const rows=parseCSV(ev.target.result);
+    if(!rows.length){hideLoading();toast('No data found','err');return}
+    if(navigator.onLine){
+      try{
+        // Batch upload 500 rows at a time to avoid GAS timeout
+        const BATCH=500;
+        let uploaded=0;
+        for(let i=0;i<rows.length;i+=BATCH){
+          const batch=rows.slice(i,i+BATCH);
+          const isFirst=(i===0);
+          showLoading(`Uploading… ${Math.min(i+BATCH,rows.length)} / ${rows.length}`);
+          const r=await gasPost({action:'uploadBeneficiaries',data:batch,append:!isFirst});
+          if(!r.success){hideLoading();toast('Upload failed at batch '+(i/BATCH+1),'err');return;}
+          uploaded+=batch.length;
+        }
+        hideLoading();
+        id('uploadMsg').innerHTML=`<span style="color:var(--green)">✅ ${uploaded} beneficiaries uploaded in ${Math.ceil(rows.length/BATCH)} batches!</span>`;
+        loadAdminStats();
+      }catch(err){hideLoading();toast('Upload failed: '+err.message,'err')}
+    }else{hideLoading();toast('Internet required to upload','err')}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function parseCSV(csv){
+  const lines=csv.trim().split('\n');if(lines.length<2)return[];
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+  return lines.slice(1).map((line,i)=>{
+    const vals=splitCSV(line);
+    const obj={};
+    headers.forEach((h,idx)=>{obj[h]=(vals[idx]||'').trim().replace(/"/g,'')});
+    // Ensure person_id exists
+    if(!obj.person_id)obj.person_id=`b_${Date.now()}_${i}`;
+    return obj;
+  }).filter(r=>r.last_name||r.lastName);
+}
+function splitCSV(line){
+  const r=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"')inQ=!inQ;
+    else if(line[i]===','&&!inQ){r.push(cur);cur=''}
+    else cur+=line[i];
+  }
+  r.push(cur);return r;
+}
+
+async function syncValidators(){
+  if(!navigator.onLine){toast('Internet required','err');return}
+  showLoading('Syncing validators…');
+  try{
+    const r=await fetch(`${CFG.GAS_URL}?action=getValidators`);
+    const d=await r.json();
+    hideLoading();toast(d.success?`✅ ${d.count} validators synced`:'Sync failed','ok');
+  }catch(e){hideLoading();toast('Failed','err')}
+}
+
+// ============================================================
+// GAS API
+// ============================================================
+async function gasPost(payload){
+  const r=await fetch(CFG.GAS_URL,{
+    method:'POST',redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(payload)
+  });
+  const text=await r.text();
+  try{return JSON.parse(text)}catch(e){console.error('GAS non-JSON:',text);throw new Error('Server error')}
+}
+
+// ============================================================
+// ONLINE / OFFLINE
+// ============================================================
+window.addEventListener('online',async()=>{
+  id('offlineBanner').classList.remove('show');
+  toast('🌐 Back online — syncing…','ok');
+  const vals=await dbAll('validations');
+  for(const r of vals.filter(v=>!v.synced)){try{await syncRecord(r)}catch(e){}}
+  refreshHomeStats();loadRecentList();
+});
+window.addEventListener('offline',()=>id('offlineBanner').classList.add('show'));
+
+// ============================================================
+// HELPERS
+// ============================================================
+function id(i){return document.getElementById(i)}
+function toast(msg,type='ok'){
+  const colors={ok:' var(--green)',err:'var(--red)',warn:'var(--orange)',info:'var(--blue)'};
+  const el=document.createElement('div');
+  el.className='toast-msg';el.style.background=colors[type]||colors.ok;el.textContent=msg;
+  id('toastWrap').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+function showLoading(msg='Loading…'){id('loadingMsg').textContent=msg;id('loadingOverlay').classList.add('show')}
+function hideLoading(){id('loadingOverlay').classList.remove('show')}
+
+// Date format mm/dd/yyyy
+function fmtBirthdate(str){
+  if(!str)return'—';
+  // Handle dd/mm/yyyy (PH format from masterlist)
+  const parts=str.split(/[\/\-\.]/);
+  if(parts.length===3){
+    if(str.includes('-')&&parts[0].length===4){
+      // yyyy-mm-dd (input date format)
+      return`${parts[1]}/${parts[2]}/${parts[0]}`;
+    }
+    // assume dd/mm/yyyy → mm/dd/yyyy
+    if(parseInt(parts[0])>12)return`${parts[1]}/${parts[0]}/${parts[2]}`;
+    return`${parts[0]}/${parts[1]}/${parts[2]}`;
+  }
+  return str;
+}
+
+function toInputDate(str){
+  // Convert any date to yyyy-mm-dd for input[type=date]
+  if(!str)return'';
+  const parts=str.split(/[\/\-\.]/);
+  if(parts.length===3){
+    if(parts[0].length===4)return str.includes('-')?str:`${parts[0]}-${parts[1]}-${parts[2]}`;
+    // dd/mm/yyyy → yyyy-mm-dd
+    if(parseInt(parts[0])>12)return`${parts[2]}-${String(parts[1]).padStart(2,'0')}-${String(parts[0]).padStart(2,'0')}`;
+    // mm/dd/yyyy → yyyy-mm-dd
+    return`${parts[2]}-${String(parts[0]).padStart(2,'0')}-${String(parts[1]).padStart(2,'0')}`;
+  }
+  return'';
+}
+
+function fmtDate(iso){
+  if(!iso)return'—';
+  const d=new Date(iso);
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  const yyyy=d.getFullYear();
+  const hh=String(d.getHours()).padStart(2,'0');
+  const min=String(d.getMinutes()).padStart(2,'0');
+  return`${mm}/${dd}/${yyyy} ${hh}:${min}`;
+}
+
+function fmtSCT(v){return({dswd:'DSWD FO Initiated',sco_lgu:'Requested by SCO/LGU',grievance:'In Response to Grievance',appeal:'Appeal for Reinstatement'})[v]||v||'—'}
+function fmtRec(v){return({retention:'For Retention',reinstatement:'For Reinstatement',delisting:'For Delisting',transfer:'For Transfer'})[v]||v||'—'}
+
+// ============================================================
+// SERVICE WORKER
+// ============================================================
+if('serviceWorker'in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW:',e));
+  });
+}
+
+// ============================================================
+// INIT — go straight to login or home
+// ============================================================
+async function init(){
+  await openDB();
+  if(!navigator.onLine)id('offlineBanner').classList.add('show');
+
+  try{
+    const sess=await kvGet('session');
+    if(sess&&sess.user&&sess.user.username){
+      CU=sess.user;
+      hideLoading();
+      afterLogin();
+      return;
+    }
+  }catch(e){}
+  showScreen('screen-login');
+}
+
+init();
+</script>
+</body>
+</html>
