@@ -122,6 +122,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--surface);color
 .search-bar-wrap{padding:14px;background:var(--blue)}
 .search-bar{display:flex;align-items:center;background:#fff;border-radius:11px;padding:4px 14px;gap:10px}
 .search-bar input{flex:1;border:none;outline:none;padding:10px 0;font-size:16px;font-family:inherit;color:var(--text)}
+.bene-list-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:10px;transition:.15s}
+.bene-list-item:last-child{border-bottom:none}
+.bene-list-item:hover,.bene-list-item:active{background:var(--surface)}
+.bene-list-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#5a8af7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.bene-list-name{font-size:14px;font-weight:700;color:var(--text)}
+.bene-list-detail{font-size:11px;color:var(--muted)}
+.bene-status-done{font-size:10px;font-weight:700;color:var(--green);background:#d4edda;padding:2px 7px;border-radius:10px;margin-left:6px}
+.bene-status-pending{font-size:10px;font-weight:700;color:var(--orange);background:#fff3cd;padding:2px 7px;border-radius:10px;margin-left:6px}
 .result-item{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;
   border:2px solid transparent;box-shadow:var(--shadow);transition:all .15s;display:flex;align-items:center;gap:14px}
 .result-item:active,.result-item.picked{border-color:var(--blue);background:#edf2ff}
@@ -393,6 +401,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--surface);color
   <div class="home-actions">
     <button class="btn-pf" onclick="goSearch()"><i class="bi bi-search" style="font-size:18px"></i>Find Beneficiary</button>
     <button class="btn-of" onclick="goSync()"><i class="bi bi-cloud-arrow-up" style="font-size:18px"></i>Sync Records</button>
+    <!-- Preloaded Beneficiaries -->
+    <div class="card-panel" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-title" style="margin-bottom:0">My Beneficiaries</div>
+        <button class="btn-clr" style="padding:6px 12px;font-size:11px" onclick="refreshBeneList()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+      </div>
+      <div id="benePreloadList"><div class="empty-state" style="padding:12px 0"><i class="bi bi-people" style="font-size:24px;display:block;margin-bottom:6px;opacity:.35"></i><p style="font-size:12px;margin:0">Loading beneficiaries…</p></div></div>
+    </div>
     <div class="card-panel">
       <div class="sec-title">Recent Validations</div>
       <div id="recentList"><div class="empty-state" style="padding:16px 0"><i class="bi bi-clipboard-x" style="font-size:28px;display:block;margin-bottom:6px;opacity:.35"></i><p style="font-size:13px;margin:0">No validations yet</p></div></div>
@@ -431,6 +447,47 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--surface);color
       <div class="sec-title">Manage Validators</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Pull validator accounts from the USERS tab in Google Sheets.</p>
       <button class="btn-of" onclick="syncValidators()"><i class="bi bi-people"></i>Sync Validators from Sheet</button>
+    </div>
+
+    <!-- SYSTEM SETTINGS -->
+    <div class="card-panel">
+      <div class="sec-title">⚙️ System Settings</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Configure server-side storage. Changes are saved to Google Apps Script and take effect immediately — no redeployment needed.</p>
+
+      <div id="settingsStatus" style="margin-bottom:14px"></div>
+
+      <div class="mb12">
+        <label class="f-label">Google Drive Root Folder ID
+          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">— Where photos &amp; signatures are stored</span>
+        </label>
+        <div style="display:flex;gap:8px">
+          <input class="f-input" id="cfgDriveId" type="text" placeholder="Paste Drive Folder ID here…" autocomplete="off" spellcheck="false" style="font-family:monospace;font-size:13px">
+          <button class="btn-clr" onclick="verifyDrive()" style="white-space:nowrap;flex-shrink:0"><i class="bi bi-check2-circle"></i> Test</button>
+        </div>
+        <div id="driveVerifyResult" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+      </div>
+
+      <div class="mb12">
+        <label class="f-label">Google Sheet ID
+          <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">— Where records are saved</span>
+        </label>
+        <input class="f-input" id="cfgSheetId" type="text" placeholder="Paste Sheet ID here…" autocomplete="off" spellcheck="false" style="font-family:monospace;font-size:13px">
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn-of" onclick="loadCurrentConfig()" style="flex:0 0 auto;padding:12px 16px">
+          <i class="bi bi-arrow-clockwise"></i> Load Current
+        </button>
+        <button class="btn-pf" onclick="saveConfig()" style="flex:1;padding:13px">
+          <i class="bi bi-cloud-check"></i> Save Settings
+        </button>
+      </div>
+
+      <div class="info-box" style="margin-top:14px;margin-bottom:0">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Drive Folder ID: open the folder in Google Drive → copy the last part of the URL.<br>
+        Sheet ID: open the spreadsheet → copy the long ID between <code style="background:rgba(0,56,168,.1);padding:1px 5px;border-radius:3px">/d/</code> and <code style="background:rgba(0,56,168,.1);padding:1px 5px;border-radius:3px">/edit</code></span>
+      </div>
     </div>
   </div>
 </div>
@@ -510,11 +567,28 @@ const CFG = {
 };
 
 const STEP_NAMES = [
-  'Spot Check Type','Beneficiary Profile','Respondent Information',
-  'Revalidation Findings','Validation Result','Remarks & Observations',
-  'Recommendation','Signatures & Thumbmark','Client Photo','Review & Submit'
+  'Type · Profile · Respondent',
+  'Revalidation Findings',
+  'Results · Remarks · Recommendation',
+  'Signatures · Photo',
+  'Review & Submit'
 ];
 const TOTAL_STEPS = STEP_NAMES.length;
+
+// Validator preferences — stored in IndexedDB, pre-fills witness & validator info
+let VPREFS = {
+  spotCheckType:      'dswd',
+  witnessName:        '',
+  witnessDesig:       '',
+  witnessPosition:    '',
+  validatorSigSaved:  null   // base64 pre-saved signature
+};
+async function loadVPrefs(){
+  try{const p=await kvGet('vprefs');if(p)VPREFS={...VPREFS,...p};}catch(e){}
+}
+async function saveVPrefs(){
+  try{await kvSet('vprefs',VPREFS);}catch(e){}
+}
 
 // ============================================================
 // INDEXEDDB
@@ -596,11 +670,13 @@ async function doLogin(){
 
 async function afterLogin(){
   if(CU.role==='admin'){
-    showScreen('screen-admin');loadAdminStats();
+    showScreen('screen-admin');loadAdminStats();loadCurrentConfig();
   }else{
     id('hName').textContent=CU.name||CU.username;
     id('hRole').textContent=CU.role==='admin'?'Administrator':'Field Validator';
+    await loadVPrefs();
     showScreen('screen-home');
+    setTimeout(()=>{loadBenePreloadList();},200);
     refreshHomeStats();loadRecentList();
     if(navigator.onLine)pullBeneficiaries();
   }
@@ -646,6 +722,46 @@ async function dbCountIndex(store,idxName,val){
     r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
   });
 }
+// Load assigned beneficiaries on home screen
+async function loadBenePreloadList(){
+  try{
+    const all=await dbGetAll('beneficiaries');
+    const validations=await dbGetAll('validations');
+    const donePids=new Set(validations.map(v=>v.bene?.person_id).filter(Boolean));
+    const myBenes=CU.validator_id
+      ? all.filter(b=>!b.validator_id||b.validator_id===CU.validator_id||b.validator_id===CU.id)
+      : all;
+    const el=id('benePreloadList');
+    if(!el)return;
+    if(!myBenes.length){
+      el.innerHTML=`<div class="empty-state" style="padding:12px 0"><i class="bi bi-people" style="font-size:24px;display:block;margin-bottom:6px;opacity:.35"></i><p style="font-size:12px;margin:0">No beneficiaries loaded. Upload the masterlist from Admin panel.</p></div>`;
+      return;
+    }
+    const show=myBenes.slice(0,15);
+    el.innerHTML=show.map(b=>{
+      const done=donePids.has(b.person_id);
+      const initials=(b.last_name||'?')[0]+(b.first_name||'?')[0];
+      return`<div class="bene-list-item" onclick="startFromPreload('${b.person_id}')">
+        <div class="bene-list-avatar">${initials.toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div class="bene-list-name">${b.last_name}, ${b.first_name} ${b.middle_name||''}<span class="${done?'bene-status-done':'bene-status-pending'}">${done?'Done':'Pending'}</span></div>
+          <div class="bene-list-detail">${b.barangay||''} &nbsp;·&nbsp; ${b.city_mun_name||''}</div>
+        </div>
+        <i class="bi bi-chevron-right" style="color:var(--muted);font-size:14px"></i>
+      </div>`;
+    }).join('')+(myBenes.length>15?`<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">+${myBenes.length-15} more — use Search to find them</div>`:'');
+  }catch(e){console.warn('loadBenePreloadList error',e)}
+}
+function refreshBeneList(){loadBenePreloadList();}
+async function startFromPreload(pid){
+  try{
+    const all=await dbGetAll('beneficiaries');
+    const bene=all.find(b=>b.person_id===pid);
+    if(bene)startForm(bene);
+    else toast('Beneficiary not found','err');
+  }catch(e){toast('Error loading beneficiary','err')}
+}
+
 async function refreshHomeStats(){
   // Use count() not dbAll() — much faster on large datasets
   const totalBene = CU.validator_id
@@ -719,7 +835,7 @@ function startForm(bene){
     bene:           bene,
     // editable corrections
     corrections:    {},
-    spotCheckType:  '',
+    spotCheckType:  VPREFS.spotCheckType||'dswd',
     respondent:     {},
     revalidation:   {},
     validationResult:{},
@@ -768,18 +884,396 @@ function confirmExit(){if(confirm('Exit form? Progress will be lost.'))showScree
 // ============================================================
 function buildStep(s){
   switch(s){
-    case 1: return s1_Type();
-    case 2: return s2_Beneficiary();
-    case 3: return s3_Respondent();
-    case 4: return s4_Revalidation();
-    case 5: return s5_Result();
-    case 6: return s6_Remarks();
-    case 7: return s7_Recommendation();
-    case 8: return s8_Signatures();
-    case 9: return s9_Photo();
-    case 10:return s10_Review();
-    default:return '';
+    case 1: return sCombined1();
+    case 2: return sCombined2();
+    case 3: return sCombined3();
+    case 4: return sCombined4();
+    default: return sReview();
   }
+}
+
+// ============================================================
+// COMBINED STEP FUNCTIONS
+// ============================================================
+
+// ── STEP 1: Spot Check Type + Beneficiary Profile + Respondent ──
+function sCombined1(){
+  const b=F.bene,c=F.corrections||{},r=F.respondent||{};
+  const types=[['dswd','DSWD FO Initiated'],['sco_lgu','Requested by SCO / LGU'],['grievance','In Response to Grievance'],['appeal','Appeal for Reinstatement']];
+  const rels=['Spouse','Child','Siblings','Caretaker','Others'];
+  const addr=[b.house_number,b.sitio_purok,b.street_name,b.bdivision_or_village].filter(Boolean).join(', ');
+  return`
+  <!-- SECTION A: Spot Check Type -->
+  <div class="card-panel">
+    <div class="sec-title">A. Spot Check Type</div>
+    <div class="row2">
+      ${types.map(([v,l])=>`
+        <div class="opt-tile sm ${F.spotCheckType===v?'on':''}" onclick="pick1('${v}',this)">
+          <input type="radio" name="sct" value="${v}" ${F.spotCheckType===v?'checked':''}><label>${l}</label>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- SECTION B: Beneficiary Profile -->
+  <div class="bene-hero" style="margin-bottom:0;border-radius:14px 14px 0 0">
+    <div class="bname">${b.last_name}, ${b.first_name} ${b.middle_name||''} ${b.ext_name||''}</div>
+    <div class="bdetail"><i class="bi bi-calendar3"></i>${fmtBirthdate(b.birthdate)} &nbsp;|&nbsp; ${b.sex||'—'} &nbsp;|&nbsp; Age: ${b.age_12312025||'—'}</div>
+    <div class="bdetail" style="margin-top:3px"><i class="bi bi-geo-alt"></i>${b.barangay||''}, ${b.city_mun_name||''}</div>
+    <div class="bdetail" style="margin-top:3px"><i class="bi bi-credit-card-2-front"></i>${b.person_id||'—'}</div>
+  </div>
+  <div class="card-panel" style="border-radius:0;margin-bottom:0;border-top:none">
+    <div class="sec-title">B. Beneficiary Profile <span style="font-size:10px;font-weight:400;color:var(--muted)">— Correct if needed</span></div>
+    <div class="tab-2col">
+      <div class="mb12"><label class="f-label">Last Name</label><input class="f-input editable" id="bLN" value="${c.last_name||b.last_name||''}"></div>
+      <div class="mb12"><label class="f-label">First Name</label><input class="f-input editable" id="bFN" value="${c.first_name||b.first_name||''}"></div>
+    </div>
+    <div class="row3 mb12">
+      <div><label class="f-label">Middle Name</label><input class="f-input editable" id="bMN" value="${c.middle_name||b.middle_name||''}"></div>
+      <div><label class="f-label">Ext.</label><input class="f-input editable" id="bEX" value="${c.ext_name||b.ext_name||''}"></div>
+    </div>
+    <div class="row2 mb12">
+      <div><label class="f-label">Birthdate</label><input class="f-input editable" id="bBD" type="date" value="${toInputDate(b.birthdate)||''}"></div>
+      <div><label class="f-label">Sex</label>
+        <select class="f-select" id="bSX">
+          <option value="Male" ${(c.sex||b.sex)==='Male'?'selected':''}>Male</option>
+          <option value="Female" ${(c.sex||b.sex)==='Female'?'selected':''}>Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="mb12"><label class="f-label">Address</label><input class="f-input editable" id="bAD" value="${c.address||addr}"></div>
+  </div>
+
+  <!-- SECTION C: Respondent -->
+  <div class="card-panel" style="border-radius:0 0 14px 14px;border-top:none">
+    <div class="sec-title">C. Respondent <span style="font-size:10px;font-weight:400;color:var(--muted)">— Person being interviewed</span></div>
+    <div class="tab-2col">
+      <div class="mb12"><label class="f-label">Last Name <span style="color:var(--red)">*</span></label><input class="f-input" id="rLN" value="${r.lastName||''}" placeholder="Last Name"></div>
+      <div class="mb12"><label class="f-label">First Name <span style="color:var(--red)">*</span></label><input class="f-input" id="rFN" value="${r.firstName||''}" placeholder="First Name"></div>
+    </div>
+    <div class="row3 mb12">
+      <div><label class="f-label">Middle Name</label><input class="f-input" id="rMN" value="${r.middleName||''}"></div>
+      <div><label class="f-label">Ext.</label><input class="f-input" id="rEX" value="${r.extension||''}"></div>
+    </div>
+    <div class="row2 mb12">
+      <div>
+        <label class="f-label">Contact No.</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:11px 10px;font-weight:700;font-size:14px">09</span>
+          <input class="f-input" id="rCN" type="tel" maxlength="9" value="${(r.contactNumber||'').replace(/^09/,'')}" placeholder="XX-XXX-XXXX" style="flex:1">
+        </div>
+      </div>
+      <div>
+        <label class="f-label">Sex</label>
+        <div style="display:flex;gap:6px">
+          <div class="opt-tile sm ${r.sex==='Female'?'on':''}" onclick="pickSex('Female',this)" style="flex:1"><input type="radio" name="sex" value="Female" ${r.sex==='Female'?'checked':''}><label>Female</label></div>
+          <div class="opt-tile sm ${r.sex==='Male'?'on':''}" onclick="pickSex('Male',this)" style="flex:1"><input type="radio" name="sex" value="Male" ${r.sex==='Male'?'checked':''}><label>Male</label></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-title" style="margin-top:10px">Relationship to Beneficiary <span style="color:var(--red)">*</span></div>
+    <div class="row3">
+      ${rels.map(rel=>`
+        <div class="opt-tile sm ${r.relationship===rel?'on':''}" onclick="pickRel('${rel}',this)">
+          <input type="radio" name="rel" value="${rel}" ${r.relationship===rel?'checked':''}><label>${rel}</label>
+        </div>`).join('')}
+    </div>
+    <div id="relOtherWrap" class="cond-box ${r.relationship==='Others'?'show':''}">
+      <input class="f-input" id="rOT" value="${r.othersText||''}" placeholder="Specify relationship…">
+    </div>
+  </div>`;
+}
+
+// ── STEP 2: Revalidation Findings ──
+function sCombined2(){
+  const rv=F.revalidation||{};
+  return`<div class="card-panel">
+    <div class="sec-title">IV. Revalidation Findings</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Check all that apply. If beneficiary receives pension from another agency, result will be auto-filled.</p>
+
+    <div class="opt-tile ${rv.otherPension?'on':''}" onclick="togRV('otherPension','rvOP',this)">
+      <input type="checkbox" ${rv.otherPension?'checked':''}><label>⚠️ Receiving pension from other government agency</label>
+    </div>
+    <div class="cond-box ${rv.otherPension?'show':''}" id="rvOP">
+      <div class="row3" style="margin-bottom:10px">
+        <div><label class="f-label">Agency</label>
+          <select class="f-select" id="rvOPa">
+            <option value="">Select</option>
+            ${['SSS','GSIS','PVAO','Others'].map(a=>`<option value="${a}" ${rv.opAgency===a?'selected':''}>${a}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="f-label">Pension Type</label>
+          <select class="f-select" id="rvOPt">
+            <option value="">Select</option>
+            ${['Principal','Survivor','Disability','Guardian'].map(t=>`<option value="${t}" ${rv.opType===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="f-label">Amount (PHP)</label>
+          <input class="f-input" type="number" id="rvOPamt" value="${rv.opAmount||''}" placeholder="0.00">
+        </div>
+      </div>
+      <div class="info-box" style="margin:0;background:#fff3cd;border-color:#ffc107;color:#7a5200">
+        <i class="bi bi-lightning-charge-fill"></i>Validation result will be auto-filled as Matched + For Delisting.
+      </div>
+    </div>
+
+    <div class="opt-tile ${rv.familySupport?'on':''}" onclick="togRV('familySupport','rvFS',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.familySupport?'checked':''}><label>Has regular family / relative support</label>
+    </div>
+    <div class="cond-box ${rv.familySupport?'show':''}" id="rvFS">
+      <div class="row2">
+        <div class="opt-tile sm ${rv.fsFreq==='Monthly'?'on':''}" onclick="pickFreq('Monthly',this)"><input type="radio" name="fsf"><label>Monthly</label></div>
+        <div class="opt-tile sm ${rv.fsFreq==='Bi-Monthly'?'on':''}" onclick="pickFreq('Bi-Monthly',this)"><input type="radio" name="fsf"><label>Bi-Monthly</label></div>
+      </div>
+      <label class="f-label" style="margin-top:8px">Amount (PHP)</label>
+      <input class="f-input" type="number" id="rvFSamt" value="${rv.fsAmount||''}" placeholder="0.00">
+    </div>
+
+    <div class="opt-tile ${rv.regularIncome?'on':''}" onclick="togRV('regularIncome','rvRI',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.regularIncome?'checked':''}><label>Has regular source of income</label>
+    </div>
+    <div class="cond-box ${rv.regularIncome?'show':''}" id="rvRI">
+      <div class="row2" style="margin-bottom:8px">
+        <div class="opt-tile sm ${rv.incSource==='Salary/Wages'?'on':''}" onclick="pickInc('Salary/Wages',this)"><input type="radio" name="inc"><label>Salary/Wages</label></div>
+        <div class="opt-tile sm ${rv.incSource==='Business'?'on':''}" onclick="pickInc('Business',this)"><input type="radio" name="inc"><label>Business</label></div>
+      </div>
+      <input class="f-input" id="rvRIspec" value="${rv.incSpec||''}" placeholder="Specify source…" style="margin-bottom:8px">
+      <input class="f-input" type="number" id="rvRIamt" value="${rv.incAmount||''}" placeholder="Amount (PHP)">
+    </div>
+
+    <div class="opt-tile ${rv.isDeceased?'on':''}" onclick="togRV('isDeceased','rvDD',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.isDeceased?'checked':''}><label>Beneficiary is deceased</label>
+    </div>
+    <div class="cond-box ${rv.isDeceased?'show':''}" id="rvDD">
+      <div class="row2">
+        <div><label class="f-label">Date of Death</label><input class="f-input" type="date" id="rvDDdate" value="${rv.dateOfDeath||''}"></div>
+        <div><label class="f-label">Document</label>
+          <select class="f-select" id="rvDDdoc">
+            <option value="">Select</option>
+            ${['Death Certificate','Barangay Cert.','LSWDO Cert.','LCR Cert.'].map(d=>`<option value="${d}" ${rv.decDoc===d?'selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-tile ${rv.absent?'on':''}" onclick="togRV('absent','rvAB',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.absent?'checked':''}><label>Beneficiary absent during payout</label>
+    </div>
+    <div class="cond-box ${rv.absent?'show':''}" id="rvAB">
+      <div class="row2" style="margin-bottom:8px">
+        <div class="opt-tile sm ${rv.absReason==='Transfer'?'on':''}" onclick="pickAbs('Transfer',this)"><input type="radio" name="abr"><label>Transferred</label></div>
+        <div class="opt-tile sm ${rv.absReason==='Not Present'?'on':''}" onclick="pickAbs('Not Present',this)"><input type="radio" name="abr"><label>Not Present</label></div>
+      </div>
+      <div class="row2">
+        <input class="f-input" id="rvABwhen" value="${rv.absWhen||''}" placeholder="When?">
+        <input class="f-input" id="rvABwhere" value="${rv.absWhere||''}" placeholder="Location">
+      </div>
+    </div>
+
+    <div class="opt-tile ${rv.fraud?'on':''}" onclick="togRV('fraud','rvFR',this)" style="margin-top:8px">
+      <input type="checkbox" ${rv.fraud?'checked':''}><label>With fraud / fake IDs</label>
+    </div>
+    <div class="cond-box ${rv.fraud?'show':''}" id="rvFR">
+      <input class="f-input" id="rvFRspec" value="${rv.fraudSpec||''}" placeholder="Describe…">
+    </div>
+  </div>`;
+}
+
+// ── STEP 3: Results + Remarks + Recommendation ──
+function sCombined3(){
+  const vr=F.validationResult||{},rc=F.recommendation||{},af=F._autofilled;
+  const recOpts=[['retention','For Retention','bi-check-circle-fill','var(--green)'],['reinstatement','For Reinstatement','bi-arrow-repeat','#0dcaf0'],['delisting','For Delisting','bi-x-circle-fill','var(--red)'],['transfer','For Transfer','bi-arrow-right-circle-fill','var(--orange)']];
+  return`
+  ${af?`<div class="info-box" style="background:#fff3cd;border-color:#ffc107;color:#7a5200;margin-bottom:12px"><i class="bi bi-lightning-charge-fill"></i><strong>Auto-filled:</strong> Other pension detected — database match and recommendation pre-set. Review and adjust if needed.</div>`:''}
+
+  <!-- Validation Result -->
+  <div class="card-panel" style="margin-bottom:0;border-radius:14px 14px 0 0">
+    <div class="sec-title">V. Validation Result — Database Match</div>
+    <div class="opt-tile ${vr.notMatched?'on':''}" onclick="togVR('notMatched',null,this)" style="margin-bottom:10px">
+      <input type="checkbox" ${vr.notMatched?'checked':''}><label>NOT matched in any database</label>
+    </div>
+    <label class="f-label">Matched in:</label>
+    <div class="tab-3col" style="margin-top:8px">
+      ${['SSS','GSIS','PVAO'].map(a=>`
+        <div>
+          <div class="opt-tile sm ${vr['m_'+a]?'on':''}" onclick="togVRa('${a}',this)">
+            <input type="checkbox" ${vr['m_'+a]?'checked':''}><label>${a}</label>
+          </div>
+          <div class="cond-box ${vr['m_'+a]?'show':''}" id="box_${a}" style="margin-top:4px">
+            <select class="f-select" id="pt_${a}" style="margin-bottom:6px">
+              <option value="">Type</option>
+              ${['Principal','Survivor','Disability','Guardian'].map(t=>`<option value="${t}" ${vr['pt_'+a]===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+            <input class="f-input" type="number" id="pa_${a}" value="${vr['pa_'+a]||''}" placeholder="Amount">
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="opt-tile sm ${vr.m_Others?'on':''}" onclick="togVR('m_Others','box_Others',this)" style="margin-top:8px">
+      <input type="checkbox" ${vr.m_Others?'checked':''}><label>Others</label>
+    </div>
+    <div class="cond-box ${vr.m_Others?'show':''}" id="box_Others">
+      <input class="f-input" id="ot_Others" value="${vr.ot_Others||''}" placeholder="Specify agency…">
+    </div>
+  </div>
+
+  <!-- Remarks -->
+  <div class="card-panel" style="border-radius:0;border-top:none;margin-bottom:0">
+    <div class="sec-title">V. Remarks &amp; Observations</div>
+    <textarea class="f-input" id="remarksTA" rows="4" placeholder="Enter remarks…" style="resize:none">${F.remarks||''}</textarea>
+  </div>
+
+  <!-- Recommendation -->
+  <div class="card-panel" style="border-radius:0 0 14px 14px;border-top:none">
+    <div class="sec-title">VI. Recommendation <span style="color:var(--red)">*</span></div>
+    <div class="row2">
+      ${recOpts.map(([v,l,ic,cl])=>`
+        <div class="opt-tile sm ${rc.type===v?'on':''}" onclick="pickRec('${v}',this)">
+          <input type="radio" name="rec" value="${v}" ${rc.type===v?'checked':''}>
+          <label><i class="bi ${ic}" style="color:${cl};margin-right:4px"></i>${l}</label>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:8px">
+      <input class="f-input" id="recOthers" value="${rc.others||''}" placeholder="Notes / others…">
+    </div>
+  </div>`;
+}
+
+// ── STEP 4: Signatures + Thumbmark + Client Photo ──
+function sCombined4(){
+  const sg=F.signatures||{};
+  const wposOpts=['MSWD Head','OSCA Head','Brgy. Senior Citizen President','Social Worker','Barangay Captain'];
+  return`
+  <!-- Respondent Signature / Thumbmark choice -->
+  <div class="card-panel" style="margin-bottom:0;border-radius:14px 14px 0 0">
+    <div class="sec-title">Respondent: Signature or Thumbmark</div>
+    <div class="row2" style="margin-bottom:12px">
+      <div class="opt-tile sm ${!sg._useThumbOnly?'on':''}" onclick="setSigMode(false,this)" style="flex:1">
+        <input type="radio" name="sigmode"><label><i class="bi bi-pen" style="margin-right:4px"></i>Wet Signature</label>
+      </div>
+      <div class="opt-tile sm ${sg._useThumbOnly?'on':''}" onclick="setSigMode(true,this)" style="flex:1">
+        <input type="radio" name="sigmode"><label><i class="bi bi-hand-index-thumb" style="margin-right:4px"></i>Thumbmark</label>
+      </div>
+    </div>
+    <!-- Signature canvas (shown when not thumbmark mode) -->
+    <div id="respSigArea" style="display:${sg._useThumbOnly?'none':'block'}">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Hand device to respondent to sign.</p>
+      <div class="sig-wrap" id="sw_resp">
+        <canvas class="sig-canvas" id="sc_resp" height="130"></canvas>
+        <div class="sig-hint" id="sh_resp"><i class="bi bi-pen"></i>Sign with finger</div>
+      </div>
+      <button class="btn-clr" onclick="clearSig('sc_resp','sh_resp')"><i class="bi bi-eraser"></i> Clear</button>
+    </div>
+    <!-- Thumbmark photo (shown when thumbmark mode) -->
+    <div id="respThumbArea" style="display:${sg._useThumbOnly?'block':'none'}">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Beneficiary places wet ink thumbmark on paper → photograph it.</p>
+      <label class="photo-label" for="thumbInput">
+        <div class="photo-zone ${sg.thumbmarkPhoto?'filled':''}" style="min-height:160px">
+          ${sg.thumbmarkPhoto?`<img src="${sg.thumbmarkPhoto}" alt="thumbmark">`:`<div class="photo-ph"><i class="bi bi-hand-index-thumb"></i><p>Tap to photograph thumbmark</p></div>`}
+        </div>
+      </label>
+      ${sg.thumbmarkPhoto?`<label for="thumbInput" style="display:inline-block;margin-top:6px"><span class="btn-clr"><i class="bi bi-arrow-repeat"></i> Retake</span></label>`:''}
+    </div>
+  </div>
+
+  <!-- Client Photo -->
+  <div class="card-panel" style="border-radius:0;border-top:none;margin-bottom:0">
+    <div class="sec-title">Client Photo</div>
+    <label class="photo-label" for="clientInput">
+      <div class="photo-zone ${F.clientPhoto?'filled':''}" style="min-height:180px">
+        ${F.clientPhoto?`<img src="${F.clientPhoto}" alt="client">`:`<div class="photo-ph"><i class="bi bi-camera"></i><p>Tap to take client photo</p></div>`}
+      </div>
+    </label>
+    ${F.clientPhoto?`<label for="clientInput" style="display:inline-block;margin-top:6px"><span class="btn-clr"><i class="bi bi-arrow-repeat"></i> Retake</span></label>`:''}
+    <div id="gpsBlock" style="margin-top:10px">
+      ${F.gps?`<div class="gps-block"><i class="bi bi-geo-alt-fill gps-icon" style="color:var(--green)"></i><div><div style="font-weight:700;color:var(--green);font-size:13px">Location Captured</div><div style="font-size:11px;color:var(--muted)">${F.gps.lat.toFixed(6)}, ${F.gps.lng.toFixed(6)} &nbsp;±${Math.round(F.gps.acc)}m</div></div></div>`:`<div class="gps-block pending"><i class="bi bi-geo-alt gps-icon" style="color:var(--orange)"></i><div style="font-weight:600;color:var(--orange);font-size:13px">Acquiring GPS…</div></div>`}
+    </div>
+  </div>
+
+  <!-- Witness -->
+  <div class="card-panel" style="border-radius:0;border-top:none;margin-bottom:0">
+    <div class="sec-title">Witnessed By</div>
+    <div class="tab-2col">
+      <div class="mb12"><label class="f-label">Witness Name</label><input class="f-input" id="wname" value="${sg.witnessName||VPREFS.witnessName||''}" placeholder="Full name…"></div>
+      <div class="mb12"><label class="f-label">Designation</label><input class="f-input" id="wdesig" value="${sg.witnessDesignation||VPREFS.witnessDesig||''}" placeholder="Designation…"></div>
+    </div>
+    <div class="mb12">
+      <label class="f-label">Position</label>
+      <select class="f-select" id="wpos">
+        <option value="">Select position…</option>
+        ${wposOpts.map(p=>`<option value="${p}" ${(sg.witnessPosition||VPREFS.witnessPosition)===p?'selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div class="sig-wrap" id="sw_wit">
+      <canvas class="sig-canvas" id="sc_wit" height="110"></canvas>
+      <div class="sig-hint" id="sh_wit"><i class="bi bi-pen"></i>Witness signs here</div>
+    </div>
+    <button class="btn-clr" onclick="clearSig('sc_wit','sh_wit')"><i class="bi bi-eraser"></i> Clear</button>
+  </div>
+
+  <!-- Validator -->
+  <div class="card-panel" style="border-radius:0 0 14px 14px;border-top:none">
+    <div class="sec-title">Interviewed By (Validator)</div>
+    <div class="mb12"><label class="f-label">Validator</label><input class="f-input" value="${CU.name||CU.username}" readonly style="background:var(--surface)"></div>
+    ${sg._validatorPreSaved&&sg.validator?`
+      <div class="info-box" style="margin-bottom:10px"><i class="bi bi-check-circle-fill" style="color:var(--green)"></i>Pre-saved signature loaded. <button class="btn-clr" style="display:inline;padding:3px 10px;margin-left:6px" onclick="clearPreSig()">Use New</button></div>
+      <div id="valSigPreview" style="border:2px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+        <img src="${sg.validator}" style="width:100%;height:auto;display:block">
+      </div>`:`
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Sign below. Tap <strong>Save as Default</strong> to pre-fill in future validations.</p>
+      <div class="sig-wrap" id="sw_val">
+        <canvas class="sig-canvas" id="sc_val" height="110"></canvas>
+        <div class="sig-hint" id="sh_val"><i class="bi bi-pen"></i>Validator signs here</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-clr" onclick="clearSig('sc_val','sh_val')"><i class="bi bi-eraser"></i> Clear</button>
+        <button class="btn-clr" onclick="saveValidatorSig()" style="background:#edf2ff;color:var(--blue)"><i class="bi bi-cloud-arrow-up"></i> Save as Default</button>
+      </div>`}
+  </div>`;
+}
+
+// ── STEP 5: Review & Submit ──
+function sReview(){
+  const b=F.bene,r=F.respondent||{},rv=F.revalidation||{},vr=F.validationResult||{},rc=F.recommendation||{},sg=F.signatures||{};
+  const flags=['otherPension','familySupport','regularIncome','isDeceased','absent','fraud'].filter(k=>rv[k]).map(k=>({otherPension:'Other Pension',familySupport:'Family Support',regularIncome:'Regular Income',isDeceased:'Deceased',absent:'Absent',fraud:'Fraud'}[k]));
+  const matched=['SSS','GSIS','PVAO','Others'].filter(a=>vr['m_'+a]);
+  return`<div class="card-panel">
+    <div class="sec-title">Review Before Submitting</div>
+    ${navigator.onLine?`<div class="submit-notice online"><i class="bi bi-wifi"></i>Online — syncs immediately.</div>`:`<div class="submit-notice offline"><i class="bi bi-wifi-off"></i>Offline — saved locally.</div>`}
+    ${[['Person ID',b.person_id||'—'],['Type',fmtSCT(F.spotCheckType)],['Beneficiary',`${b.last_name}, ${b.first_name}`],['Respondent',`${r.lastName||'—'}, ${r.firstName||'—'}`],['Relationship',r.relationship||'—'],['Revalidation',flags.length?flags.join(', '):'None'],['DB Match',vr.notMatched?'Not Matched':(matched.length?matched.join(', '):'Not specified')],['Recommendation',fmtRec(rc.type)],['Respondent Sig',sg.respondent?'✅ Signed':sg._useThumbOnly?'— (thumbmark mode)':(sg.thumbmarkPhoto?'✅ Thumbmark':'⚠️ Missing')],['Client Photo',F.clientPhoto?'✅ Captured':'⚠️ Not taken'],['GPS',F.gps?`${F.gps.lat.toFixed(4)}, ${F.gps.lng.toFixed(4)}`:'⚠️ Missing']].map(([l,v])=>`<div class="review-row"><div class="rlabel">${l}</div><div class="rvalue">${v}</div></div>`).join('')}
+  </div>`;
+}
+
+// Signature mode toggle
+function setSigMode(thumbOnly, el){
+  F.signatures=F.signatures||{};
+  F.signatures._useThumbOnly=thumbOnly;
+  document.querySelectorAll('[name="sigmode"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));
+  el.classList.add('on');
+  id('respSigArea').style.display=thumbOnly?'none':'block';
+  id('respThumbArea').style.display=thumbOnly?'block':'none';
+  if(!thumbOnly){
+    setTimeout(()=>{
+      initCanvas('sc_resp','sh_resp');
+      if(F.signatures.respondent)restoreCanvas('sc_resp','sh_resp',F.signatures.respondent);
+    },100);
+  }
+}
+
+// Save validator signature as default
+function saveValidatorSig(){
+  const d=canvasData('sc_val');
+  if(!d){toast('Draw your signature first','warn');return}
+  VPREFS.validatorSig=d;
+  saveVPrefs();
+  F.signatures=F.signatures||{};
+  F.signatures.validator=d;
+  F.signatures._validatorPreSaved=true;
+  toast('✅ Signature saved as default','ok');
+  renderStep();
+}
+function clearPreSig(){
+  F.signatures._validatorPreSaved=false;
+  F.signatures.validator=null;
+  renderStep();
 }
 
 // STEP 1
@@ -799,7 +1293,7 @@ function s1_Type(){
       </div>`).join('')}
   </div>`;
 }
-function pick1(v,el){F.spotCheckType=v;document.querySelectorAll('[name="sct"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
+function pick1(v,el){F.spotCheckType=v;VPREFS.spotCheckType=v;saveVPrefs();document.querySelectorAll('[name="sct"]').forEach(e=>e.closest('.opt-tile').classList.remove('on'));el.classList.add('on')}
 
 // STEP 2 — editable fields
 function s2_Beneficiary(){
@@ -1162,13 +1656,20 @@ function s10_Review(){
 // STEP EXTRAS (canvas init)
 // ============================================================
 function initStepExtras(s){
-  if(s===8){
+  if(s===4){
+    // Use 200ms delay + check offsetWidth to ensure canvas is fully rendered
     setTimeout(()=>{
       ['resp','wit','val'].forEach(k=>{
-        initCanvas(`sc_${k}`,`sh_${k}`);
-        if(F.signatures[k])restoreCanvas(`sc_${k}`,`sh_${k}`,F.signatures[k]);
+        const c=id(`sc_${k}`);
+        // If canvas hasn't rendered (offsetWidth=0), retry once more
+        if(c&&c.offsetWidth===0){
+          setTimeout(()=>{initCanvas(`sc_${k}`,`sh_${k}`);if(F.signatures[k])restoreCanvas(`sc_${k}`,`sh_${k}`,F.signatures[k]);},300);
+        } else {
+          initCanvas(`sc_${k}`,`sh_${k}`);
+          if(F.signatures[k])restoreCanvas(`sc_${k}`,`sh_${k}`,F.signatures[k]);
+        }
       });
-    },80);
+    },200);
   }
 }
 
@@ -1177,7 +1678,8 @@ function initStepExtras(s){
 // ============================================================
 function initCanvas(cid,hid){
   const c=id(cid);if(!c)return;
-  c.width=c.offsetWidth;
+  // Ensure canvas has valid width (fallback to 340 if not rendered yet)
+  c.width=c.offsetWidth>0?c.offsetWidth:Math.min(window.innerWidth-32,600);
   const ctx=c.getContext('2d');
   ctx.strokeStyle='#1a1f36';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
   let drawing=false,lx=0,ly=0;
@@ -1195,15 +1697,25 @@ function initCanvas(cid,hid){
 }
 function clearSig(cid,hid){const c=id(cid);if(!c)return;c.getContext('2d').clearRect(0,0,c.width,c.height);id(hid)?.classList.remove('gone')}
 function restoreCanvas(cid,hid,dataUrl){const c=id(cid);if(!c||!dataUrl)return;const img=new Image();img.onload=()=>{c.getContext('2d').drawImage(img,0,0);id(hid)?.classList.add('gone')};img.src=dataUrl}
-function canvasData(cid){const c=id(cid);if(!c)return null;const px=c.getContext('2d').getImageData(0,0,c.width,c.height).data;if(!px.some(v=>v!==0))return null;return c.toDataURL('image/png')}
+function canvasData(cid){
+  const c=id(cid);if(!c||c.width===0||c.height===0)return null;
+  const px=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+  if(!px.some(v=>v!==0))return null;
+  // Convert to JPEG with white background (smaller than PNG, ~60% size reduction)
+  const cv2=document.createElement('canvas');cv2.width=c.width;cv2.height=c.height;
+  const ctx2=cv2.getContext('2d');
+  ctx2.fillStyle='#ffffff';ctx2.fillRect(0,0,cv2.width,cv2.height);
+  ctx2.drawImage(c,0,0);
+  return cv2.toDataURL('image/jpeg',0.80);
+}
 
 // ============================================================
 // PHOTO CAPTURE
 // ============================================================
 function handleCapture(e,type){
   const file=e.target.files[0];if(!file)return;
-  const maxDim=type==='thumbmark'?800:1200;
-  compressImg(file,maxDim,.85,dataUrl=>{
+  const maxDim=type==='thumbmark'?600:900;
+  compressImg(file,maxDim,.75,dataUrl=>{
     if(type==='thumbmark')F.signatures.thumbmarkPhoto=dataUrl;
     else F.clientPhoto=dataUrl;
     e.target.value=''; // reset so same photo can be retaken
@@ -1248,17 +1760,15 @@ function getGPS(){
 function collectStep(){
   const g=eid=>{const e=id(eid);return e?e.value:''};
   switch(STEP){
-    case 2:
+    case 1: // Type + Beneficiary + Respondent
       F.corrections={
         last_name:g('bLN'),first_name:g('bFN'),middle_name:g('bMN'),
         ext_name:g('bEX'),birthdate:g('bBD'),sex:g('bSX'),address:g('bAD')
       };
-      break;
-    case 3:
       F.respondent={...F.respondent,lastName:g('rLN'),firstName:g('rFN'),
         middleName:g('rMN'),extension:g('rEX'),contactNumber:'09'+g('rCN'),othersText:g('rOT')};
       break;
-    case 4:
+    case 2: // Revalidation findings — also auto-fill result if other pension
       const rv=F.revalidation;
       if(rv.otherPension){rv.opAgency=g('rvOPa');rv.opType=g('rvOPt');rv.opAmount=g('rvOPamt')}
       if(rv.familySupport){rv.fsAmount=g('rvFSamt')}
@@ -1266,22 +1776,42 @@ function collectStep(){
       if(rv.isDeceased){rv.dateOfDeath=g('rvDDdate');rv.decDoc=g('rvDDdoc')}
       if(rv.absent){rv.absWhen=g('rvABwhen');rv.absWhere=g('rvABwhere');rv.absDetails=g('rvABdet')}
       if(rv.fraud){rv.fraudSpec=g('rvFRspec')}
-      rv.locAddress=g('locAddress'); rv.locNew=g('locNew');
-      rv.movsRef=g('movsRef'); rv.pcnNumber=g('pcnNumber');
+      rv.locAddress=g('locAddress');rv.locNew=g('locNew');
+      rv.movsRef=g('movsRef');rv.pcnNumber=g('pcnNumber');
+      // AUTO-FILL: other pension → auto-set validation result + recommendation
+      if(rv.otherPension&&rv.opAgency){
+        const a=rv.opAgency;
+        if(!F.validationResult)F.validationResult={};
+        F.validationResult['m_'+a]=true;
+        F.validationResult['pt_'+a]=rv.opType||'';
+        F.validationResult['pa_'+a]=rv.opAmount||'';
+        if(!F.recommendation.type)F.recommendation.type='delisting';
+        F._autofilled=true;
+      }
       break;
-    case 5:
-      const vr=F.validationResult;
-      ['SSS','GSIS','PVAO'].forEach(a=>{if(vr['m_'+a]){vr['pt_'+a]=g('pt_'+a);vr['pa_'+a]=g('pa_'+a)}});
-      if(vr.m_Others)vr.ot_Others=g('ot_Others');
-      vr.discName=g('discName'); vr.discField=g('discField');
-      vr.salaryAmount=g('salaryAmount');
+    case 3: // Results + Remarks + Recommendation
+      const vr2=F.validationResult;
+      ['SSS','GSIS','PVAO'].forEach(a=>{if(vr2['m_'+a]){vr2['pt_'+a]=g('pt_'+a);vr2['pa_'+a]=g('pa_'+a)}});
+      if(vr2.m_Others)vr2.ot_Others=g('ot_Others');
+      F.remarks=g('remarksTA');
+      F.recommendation={...F.recommendation,others:g('recOthers')};
       break;
-    case 6: F.remarks=g('remarksTA');break;
-    case 7: F.recommendation={...F.recommendation,others:g('recOthers')};break;
-    case 8:
-      F.signatures={...F.signatures,
-        respondent:canvasData('sc_resp'),witness:canvasData('sc_wit'),validator:canvasData('sc_val'),
-        witnessName:g('wname'),witnessDesignation:g('wdesig')};
+    case 4: // Signatures + Photos
+      const sg=F.signatures||{};
+      sg.respondent=sg._useThumbOnly?null:canvasData('sc_resp');
+      sg.witness=canvasData('sc_wit');
+      sg.validator=sg._validatorPreSaved?sg.validator:canvasData('sc_val');
+      sg.witnessName=g('wname');
+      sg.witnessDesignation=g('wdesig');
+      sg.witnessPosition=g('wpos');
+      F.signatures=sg;
+      // Persist witness prefs
+      if(sg.witnessName){
+        VPREFS.witnessName=sg.witnessName;
+        VPREFS.witnessDesig=sg.witnessDesignation;
+        VPREFS.witnessPosition=sg.witnessPosition;
+        saveVPrefs();
+      }
       break;
   }
 }
@@ -1291,13 +1821,17 @@ function collectStep(){
 // ============================================================
 function validateStep(){
   switch(STEP){
-    case 1: if(!F.spotCheckType){toast('Select the spot check type','warn');return false}break;
-    case 3:
+    case 1:
+      if(!F.spotCheckType){toast('Select the spot check type','warn');return false}
       if(!id('rLN')?.value.trim()||!id('rFN')?.value.trim()){toast('Enter respondent name','warn');return false}
       if(!F.respondent?.relationship){toast('Select relationship to beneficiary','warn');return false}
       break;
-    case 7: if(!F.recommendation?.type){toast('Select a recommendation','warn');return false}break;
-    case 9: if(!F.clientPhoto){if(!confirm('No client photo taken. Continue anyway?'))return false}break;
+    case 3:
+      if(!F.recommendation?.type){toast('Select a recommendation','warn');return false}
+      break;
+    case 4:
+      if(!F.clientPhoto){if(!confirm('No client photo. Continue anyway?'))return false}
+      break;
   }
   return true;
 }
@@ -1336,9 +1870,13 @@ async function syncRecord(rec){
     ['sigValidatorUrl',rec.signatures?.validator,`sig_validator.png`],
     ['sigWitnessUrl',rec.signatures?.witness,`sig_witness.png`]
   ];
-  for(const[key,data,fname]of files){
-    if(!data)continue;
+  const uploadItems=files.filter(([,d])=>d);
+  let uploadOk=0,uploadFail=0;
+  for(let i=0;i<uploadItems.length;i++){
+    const[key,data,fname]=uploadItems[i];
+    showLoading(`Uploading file ${i+1} of ${uploadItems.length}…`);
     try{
+      if(!data||!data.includes(','))continue;
       const r=await gasPost({
         action:'uploadFile',
         filename:fname,
@@ -1349,9 +1887,11 @@ async function syncRecord(rec){
         barangay:b.barangay||'',
         beneficiaryFolder:buildBeneFolderName(b)
       });
-      if(r.url)uploads[key]=r.url;
-    }catch(e){}
+      if(r&&r.url){uploads[key]=r.url;uploadOk++;}
+      else{uploadFail++;console.warn('Upload no URL:',fname,r);}
+    }catch(e){uploadFail++;console.error('Upload failed:',fname,e.message);}
   }
+  if(uploadFail>0)toast(`⚠️ ${uploadFail} file(s) failed to upload — record saved locally`,'warn');
   // Submit record (no base64)
   const payload={
     action:'submitValidation',
@@ -1540,6 +2080,67 @@ async function syncValidators(){
     const d=await r.json();
     hideLoading();toast(d.success?`✅ ${d.count} validators synced`:'Sync failed','ok');
   }catch(e){hideLoading();toast('Failed','err')}
+}
+
+// ============================================================
+// ADMIN — SYSTEM SETTINGS
+// ============================================================
+async function loadCurrentConfig(){
+  if(!navigator.onLine){toast('Internet required','err');return}
+  const el=id('settingsStatus');
+  el.innerHTML=`<div class="info-box" style="margin:0"><i class="bi bi-hourglass-split"></i>Loading current settings…</div>`;
+  try{
+    const r=await fetch(`${CFG.GAS_URL}?action=getConfig`);
+    const d=await r.json();
+    if(d.success){
+      id('cfgDriveId').value=d.driveId||'';
+      id('cfgSheetId').value=d.sheetId||'';
+      el.innerHTML=`<div class="info-box" style="margin:0;background:#f0faf4;color:var(--green);border-color:#b7e5c9"><i class="bi bi-check-circle-fill"></i>Current settings loaded from server.</div>`;
+    }else{
+      el.innerHTML=`<div class="warn-box" style="margin:0">⚠️ Could not load settings: ${d.message||'Unknown error'}</div>`;
+    }
+  }catch(e){
+    el.innerHTML=`<div class="warn-box" style="margin:0">⚠️ Network error: ${e.message}</div>`;
+  }
+}
+
+async function verifyDrive(){
+  const folderId=id('cfgDriveId').value.trim();
+  if(!folderId){toast('Paste a Drive Folder ID first','warn');return}
+  if(!navigator.onLine){toast('Internet required','err');return}
+  const el=id('driveVerifyResult');
+  el.innerHTML='<span style="color:var(--muted)">⏳ Testing…</span>';
+  try{
+    const r=await gasPost({action:'verifyDrive',folderId});
+    if(r.success){
+      el.innerHTML=`<span style="color:var(--green)">✅ Folder found: <strong>${r.folderName}</strong></span>`;
+    }else{
+      el.innerHTML=`<span style="color:var(--red)">❌ ${r.message}</span>`;
+    }
+  }catch(e){
+    el.innerHTML=`<span style="color:var(--red)">❌ Error: ${e.message}</span>`;
+  }
+}
+
+async function saveConfig(){
+  const driveId=id('cfgDriveId').value.trim();
+  const sheetId=id('cfgSheetId').value.trim();
+  if(!driveId||!sheetId){toast('Both fields are required','warn');return}
+  if(!navigator.onLine){toast('Internet required','err');return}
+  if(!confirm('Save new Drive and Sheet IDs to the server? This will affect all validators immediately.'))return;
+  showLoading('Saving settings…');
+  try{
+    const r=await gasPost({action:'saveConfig',driveId,sheetId});
+    hideLoading();
+    const el=id('settingsStatus');
+    if(r.success){
+      toast('✅ Settings saved successfully!','ok');
+      el.innerHTML=`<div class="info-box" style="margin:0;background:#f0faf4;color:var(--green);border-color:#b7e5c9"><i class="bi bi-check-circle-fill"></i>Settings saved! Drive: <code style="font-size:11px">${driveId.substring(0,12)}…</code></div>`;
+    }else{
+      toast('❌ Failed: '+(r.message||'Unknown error'),'err');
+      el.innerHTML=`<div class="warn-box" style="margin:0">❌ Save failed: ${r.message}</div>`;
+    }
+  }catch(e){hideLoading();toast('Error: '+e.message,'err')}
 }
 
 // ============================================================
