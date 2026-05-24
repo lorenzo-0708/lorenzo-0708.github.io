@@ -826,8 +826,8 @@ async function dbCountIndex(store,idxName,val){
 // Load assigned beneficiaries on home screen
 async function loadBenePreloadList(){
   try{
-    const all=await dbGetAll('beneficiaries');
-    const validations=await dbGetAll('validations');
+    const all=await dbAll('beneficiaries');
+    const validations=await dbAll('validations');
     const donePids=new Set(validations.map(v=>v.bene?.person_id).filter(Boolean));
     const myBenes=CU.validator_id
       ? all.filter(b=>!b.validator_id||b.validator_id===CU.validator_id||b.validator_id===CU.id)
@@ -856,7 +856,7 @@ async function loadBenePreloadList(){
 function refreshBeneList(){loadBenePreloadList();}
 async function startFromPreload(pid){
   try{
-    const all=await dbGetAll('beneficiaries');
+    const all=await dbAll('beneficiaries');
     const bene=all.find(b=>b.person_id===pid);
     if(bene)startForm(bene);
     else toast('Beneficiary not found','err');
@@ -1043,6 +1043,13 @@ function sCombined1(){
     </div>
     <div class="mb12"><label class="f-label">Address</label><input class="f-input editable" id="bAD" value="${c.address||addr}"></div>
   </div>
+<div class="mb12">
+  <label class="f-label">National ID No.</label>
+  <input class="f-input" id="bNID" 
+    value="${c.national_id||b.national_id||''}" 
+    placeholder="____-____-____-____" 
+    style="font-family:monospace;letter-spacing:2px">
+</div>
 
   <!-- SECTION C: Respondent -->
   <div class="card-panel" style="border-radius:0 0 14px 14px;border-top:none">
@@ -1339,7 +1346,7 @@ function sReview(){
   return`<div class="card-panel">
     <div class="sec-title">Review Before Submitting</div>
     ${navigator.onLine?`<div class="submit-notice online"><i class="bi bi-wifi"></i>Online — syncs immediately.</div>`:`<div class="submit-notice offline"><i class="bi bi-wifi-off"></i>Offline — saved locally.</div>`}
-    ${[['Person ID',b.person_id||'—'],['Type',fmtSCT(F.spotCheckType)],['Beneficiary',`${b.last_name}, ${b.first_name}`],['Respondent',`${r.lastName||'—'}, ${r.firstName||'—'}`],['Relationship',r.relationship||'—'],['Revalidation',flags.length?flags.join(', '):'None'],['DB Match',vr.notMatched?'Not Matched':(matched.length?matched.join(', '):'Not specified')],['Recommendation',fmtRec(rc.type)],['Respondent Sig',sg.respondent?'✅ Signed':sg._useThumbOnly?'— (thumbmark mode)':(sg.thumbmarkPhoto?'✅ Thumbmark':'⚠️ Missing')],['Client Photo',F.clientPhoto?'✅ Captured':'⚠️ Not taken'],['GPS',F.gps?`${F.gps.lat.toFixed(4)}, ${F.gps.lng.toFixed(4)}`:'⚠️ Missing']].map(([l,v])=>`<div class="review-row"><div class="rlabel">${l}</div><div class="rvalue">${v}</div></div>`).join('')}
+    ${[['Person ID',b.person_id||'—'],['National ID', b.national_id||c.national_id||'—'],['Type',fmtSCT(F.spotCheckType)],['Beneficiary',`${b.last_name}, ${b.first_name}`],['Respondent',`${r.lastName||'—'}, ${r.firstName||'—'}`],['Relationship',r.relationship||'—'],['Revalidation',flags.length?flags.join(', '):'None'],['DB Match',vr.notMatched?'Not Matched':(matched.length?matched.join(', '):'Not specified')],['Recommendation',fmtRec(rc.type)],['Respondent Sig',sg.respondent?'✅ Signed':sg._useThumbOnly?'— (thumbmark mode)':(sg.thumbmarkPhoto?'✅ Thumbmark':'⚠️ Missing')],['Client Photo',F.clientPhoto?'✅ Captured':'⚠️ Not taken'],['GPS',F.gps?`${F.gps.lat.toFixed(4)}, ${F.gps.lng.toFixed(4)}`:'⚠️ Missing']].map(([l,v])=>`<div class="review-row"><div class="rlabel">${l}</div><div class="rvalue">${v}</div></div>`).join('')}
   </div>`;
 }
 
@@ -1864,7 +1871,7 @@ function collectStep(){
     case 1: // Type + Beneficiary + Respondent
       F.corrections={
         last_name:g('bLN'),first_name:g('bFN'),middle_name:g('bMN'),
-        ext_name:g('bEX'),birthdate:g('bBD'),sex:g('bSX'),address:g('bAD')
+        ext_name:g('bEX'),birthdate:g('bBD'),sex:g('bSX'),address:g('bAD'),national_id:g('bNID')
       };
       F.respondent={...F.respondent,lastName:g('rLN'),firstName:g('rFN'),
         middleName:g('rMN'),extension:g('rEX'),contactNumber:'09'+g('rCN'),othersText:g('rOT')};
@@ -2286,20 +2293,25 @@ function hideLoading(){id('loadingOverlay').classList.remove('show')}
 // Date format mm/dd/yyyy
 function fmtBirthdate(str){
   if(!str)return'—';
-  // Handle dd/mm/yyyy (PH format from masterlist)
+  // Handle full JS Date strings (e.g. "Sat Jun 21 1952 00:00:00 GMT+0800...")
+  if(str.includes(' ')&&str.length>15){
+    const direct=new Date(str);
+    if(!isNaN(direct))return direct.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+  }
+  // Handle mm/dd/yyyy or yyyy-mm-dd
   const parts=str.split(/[\/\-\.]/);
+  let d;
   if(parts.length===3){
     if(str.includes('-')&&parts[0].length===4){
-      // yyyy-mm-dd (input date format)
-      return`${parts[1]}/${parts[2]}/${parts[0]}`;
+      d=new Date(parts[0],parts[1]-1,parts[2]);
+    }else{
+      const m=parseInt(parts[0]),dy=parseInt(parts[1]),y=parseInt(parts[2]);
+      d=m>12?new Date(y,m-1,dy):new Date(y,m-1,dy);
     }
-    // assume dd/mm/yyyy → mm/dd/yyyy
-    if(parseInt(parts[0])>12)return`${parts[1]}/${parts[0]}/${parts[2]}`;
-    return`${parts[0]}/${parts[1]}/${parts[2]}`;
   }
-  return str;
+  if(!d||isNaN(d))return str;
+  return d.toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
 }
-
 function toInputDate(str){
   // Convert any date to yyyy-mm-dd for input[type=date]
   if(!str)return'';
